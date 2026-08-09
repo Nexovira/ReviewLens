@@ -9,6 +9,7 @@ import { ReportHistoryView } from './components/ReportHistoryView';
 import { BillingView } from './components/BillingView';
 import { AuthModal } from './components/AuthModal';
 import { PrintableReportView } from './components/PrintableReportView';
+import { TourGuideModal } from './components/TourGuideModal';
 import { UserProfile, Product, PlanTier } from './types';
 import {
   getStoredUser,
@@ -18,6 +19,15 @@ import {
   deleteStoredProduct,
   setStoredUser,
 } from './lib/supabaseClient';
+import { auth, onAuthStateChanged } from './lib/firebase';
+import { 
+  getUserProfile, 
+  saveUserProfile, 
+  subscribeToUserProducts, 
+  saveProductToFirestore, 
+  deleteProductFromFirestore,
+  logoutUser 
+} from './lib/firebaseService';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<string>('landing');
@@ -28,19 +38,67 @@ export default function App() {
   // Modals
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
   const [authDefaultPlan, setAuthDefaultPlan] = useState<PlanTier>('Growth');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Load initial data
+  // Listen to Firebase Auth state
   useEffect(() => {
-    const loadedUser = getStoredUser();
-    const loadedProducts = getStoredProducts();
-    setUser(loadedUser);
-    setProducts(loadedProducts);
-    if (loadedProducts.length > 0) {
-      setSelectedProduct(loadedProducts[0]);
-    }
+    const unsubscribeAuth = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        const profile = await getUserProfile(fbUser.uid);
+        if (profile) {
+          setUser(profile);
+        } else {
+          // Fallback if profile doc hasn't been written yet
+          const fallback: UserProfile = {
+            id: fbUser.uid,
+            email: fbUser.email || 'user@store.com',
+            storeName: fbUser.displayName || 'My E-Commerce Store',
+            planTier: 'Growth',
+            createdAt: new Date().toISOString()
+          };
+          setUser(fallback);
+          saveUserProfile(fallback);
+        }
+      } else {
+        // Fallback to local user or null
+        const local = getStoredUser();
+        if (local && local.id !== 'usr_demo_101') {
+          setUser(local);
+        }
+      }
+    });
+
+    return () => unsubscribeAuth();
   }, []);
+
+  // Realtime products subscription when user is logged in
+  useEffect(() => {
+    if (!user) {
+      const stored = getStoredProducts();
+      setProducts(stored);
+      if (stored.length > 0 && !selectedProduct) {
+        setSelectedProduct(stored[0]);
+      }
+      return;
+    }
+
+    const unsubProducts = subscribeToUserProducts(user.id, (fetchedProducts) => {
+      setProducts(fetchedProducts);
+      if (fetchedProducts.length > 0) {
+        setSelectedProduct((prev) => {
+          if (!prev) return fetchedProducts[0];
+          const matched = fetchedProducts.find((p) => p.id === prev.id);
+          return matched || fetchedProducts[0];
+        });
+      } else {
+        setSelectedProduct(null);
+      }
+    });
+
+    return () => unsubProducts();
+  }, [user?.id]);
 
   const handleOpenAuthWithPlan = (tier: PlanTier) => {
     setAuthDefaultPlan(tier);
@@ -52,24 +110,29 @@ export default function App() {
     setCurrentView('dashboard');
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('reviewlens_user_profile');
+  const handleLogout = async () => {
+    await logoutUser();
     setUser(null);
     setCurrentView('landing');
   };
 
-  const handleAddProductComplete = (newProduct: Product) => {
-    const updated = addStoredProduct(newProduct);
-    setProducts(updated);
+  const handleAddProductComplete = async (newProduct: Product) => {
+    if (user) {
+      await saveProductToFirestore(newProduct, user.id);
+    } else {
+      addStoredProduct(newProduct);
+      setProducts(getStoredProducts());
+    }
     setSelectedProduct(newProduct);
     setCurrentView('dashboard');
   };
 
-  const handleDeleteProduct = (productId: string) => {
-    const updated = deleteStoredProduct(productId);
-    setProducts(updated);
-    if (selectedProduct?.id === productId) {
-      setSelectedProduct(updated.length > 0 ? updated[0] : null);
+  const handleDeleteProduct = async (productId: string) => {
+    if (user) {
+      await deleteProductFromFirestore(productId);
+    } else {
+      const updated = deleteStoredProduct(productId);
+      setProducts(updated);
     }
   };
 
@@ -92,8 +155,12 @@ export default function App() {
           lastAnalyzedAt: new Date().toISOString(),
           latestAnalysis: data.data,
         };
-        const updatedList = updateStoredProduct(updatedProduct);
-        setProducts(updatedList);
+        if (user) {
+          await saveProductToFirestore(updatedProduct, user.id);
+        } else {
+          updateStoredProduct(updatedProduct);
+          setProducts(getStoredProducts());
+        }
         setSelectedProduct(updatedProduct);
       }
     } catch (err) {
@@ -122,6 +189,7 @@ export default function App() {
         currentView={currentView}
         onSelectView={setCurrentView}
         productCount={products.length}
+        onOpenTour={() => setIsTourOpen(true)}
       />
 
       {/* Main Body */}
@@ -151,6 +219,7 @@ export default function App() {
             user={user}
             onOpenAddProduct={() => setIsAddProductOpen(true)}
             productCount={products.length}
+            onOpenTour={() => setIsTourOpen(true)}
           />
 
           {/* Main Dashboard Content Area */}
@@ -221,6 +290,13 @@ export default function App() {
         isOpen={isAddProductOpen}
         onClose={() => setIsAddProductOpen(false)}
         onAnalyzeComplete={handleAddProductComplete}
+      />
+
+      {/* Product Tour Guide Modal */}
+      <TourGuideModal
+        isOpen={isTourOpen}
+        onClose={() => setIsTourOpen(false)}
+        onStartAnalyzing={() => setIsAddProductOpen(true)}
       />
     </div>
   );

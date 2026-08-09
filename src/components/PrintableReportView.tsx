@@ -1,6 +1,7 @@
 import React from 'react';
 import { Product, AnalysisResult } from '../types';
 import { ArrowLeft, Printer, Sparkles, BarChart3, CheckSquare } from 'lucide-react';
+import { Logo } from './Logo';
 
 interface PrintableReportViewProps {
   product: Product;
@@ -39,13 +40,11 @@ export const PrintableReportView: React.FC<PrintableReportViewProps> = ({ produc
       <div className="max-w-4xl mx-auto bg-slate-900 border border-slate-800 rounded-2xl p-8 text-slate-100 print:bg-white print:text-black print:border-none print:shadow-none print:p-0">
         {/* Document Header */}
         <div className="border-b border-slate-800 print:border-gray-300 pb-6 mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold">
-              <BarChart3 className="w-6 h-6" />
-            </div>
+          <div className="flex items-center gap-4">
+            <Logo size="md" variant="full" />
             <div>
-              <h1 className="text-xl font-extrabold text-white print:text-black">
-                ReviewLens Executive Audit Report
+              <h1 className="text-lg font-black text-white print:text-black">
+                Executive Review Audit Report
               </h1>
               <p className="text-xs text-slate-400 print:text-gray-600">
                 Product Sentiment & AI Action Intelligence Report

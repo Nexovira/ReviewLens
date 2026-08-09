@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "User profile and subscription metadata",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "storeName": { "type": "string" },
+        "plan": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["email"]
+    },
+    "products": {
+      "title": "Product",
+      "description": "Products registered by users for review monitoring",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "url": { "type": "string" },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "name"]
+    },
+    "analyses": {
+      "title": "Analysis Report",
+      "description": "AI analysis reports generated from customer reviews",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "sentimentScore": { "type": "number" },
+        "letterGrade": { "type": "string" },
+        "ratingDistribution": { "type": "object" },
+        "strengths": { "type": "array" },
+        "complaints": { "type": "array" },
+        "featureMentions": { "type": "array" },
+        "competitorMentions": { "type": "array" },
+        "actionPlan": { "type": "array" },
+        "replyTemplates": { "type": "array" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "productId"]
+    }
+  }
+}

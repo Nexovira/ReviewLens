@@ -9,8 +9,10 @@ import {
   Sparkles,
   Zap,
   BarChart2,
+  Compass,
 } from 'lucide-react';
 import { UserProfile, PlanTier } from '../types';
+import { Logo } from './Logo';
 
 interface SidebarProps {
   currentView: string;
@@ -18,6 +20,7 @@ interface SidebarProps {
   user: UserProfile | null;
   onOpenAddProduct: () => void;
   productCount: number;
+  onOpenTour?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -26,6 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   user,
   onOpenAddProduct,
   productCount,
+  onOpenTour,
 }) => {
   const isCompetitorLocked = user?.planTier === 'Starter';
 
@@ -60,6 +64,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside className="w-64 bg-[#0F172A] border-r border-slate-800/80 flex flex-col justify-between shrink-0 text-slate-400 hidden md:flex">
       {/* Top Section */}
       <div className="p-5 space-y-6">
+        {/* Logo Banner */}
+        <div className="pb-2 border-b border-slate-800/80">
+          <Logo size="sm" variant="full" />
+        </div>
+
         {/* Quick Add Product Button */}
         <button
           onClick={onOpenAddProduct}
@@ -109,6 +118,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
+
+          {onOpenTour && (
+            <button
+              onClick={onOpenTour}
+              className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold text-blue-400 hover:text-white hover:bg-slate-800/50 transition-all border border-blue-500/20 bg-blue-500/5 mt-2"
+            >
+              <div className="flex items-center gap-3">
+                <Compass className="w-4 h-4 text-blue-400" />
+                <span>Product Tour</span>
+              </div>
+              <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">
+                Guide
+              </span>
+            </button>
+          )}
         </div>
       </div>
 

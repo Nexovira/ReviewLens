@@ -1,7 +1,8 @@
 import React from 'react';
-import { Sparkles, BarChart3, User, LogOut, Layers, ShieldCheck, Zap } from 'lucide-react';
+import { Sparkles, BarChart3, User, LogOut, Layers, ShieldCheck, Zap, Compass } from 'lucide-react';
 import { UserProfile } from '../types';
 import { getTierProductLimit } from '../lib/supabaseClient';
+import { Logo } from './Logo';
 
 interface NavbarProps {
   user: UserProfile | null;
@@ -10,6 +11,7 @@ interface NavbarProps {
   currentView: string;
   onSelectView: (view: string) => void;
   productCount: number;
+  onOpenTour?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -19,9 +21,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentView,
   onSelectView,
   productCount,
+  onOpenTour,
 }) => {
   const isAppView = currentView !== 'landing';
-  const tierLimit = user ? getTierProductLimit(user.planTier) : 1;
+  const tierLimit = user ? getTierProductLimit(user.planTier, user.email) : 1;
+  const isAdminOrPro = user && (user.planTier === 'Pro' || user.email.toLowerCase().includes('admin') || user.email.toLowerCase() === 'ummuunaysah2006@gmail.com');
 
   return (
     <header className="sticky top-0 z-40 bg-[#0F172A] border-b border-slate-800 text-slate-100 shadow-sm">
@@ -29,22 +33,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* Brand Logo */}
         <button
           onClick={() => onSelectView('landing')}
-          className="flex items-center gap-3 text-left group focus:outline-none"
+          className="flex items-center text-left group focus:outline-none"
         >
-          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white font-bold text-lg group-hover:scale-105 transition-transform shadow-md shadow-blue-500/30">
-            L
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-white font-bold text-xl tracking-tight">ReviewLens</span>
-              <span className="text-[9px] font-extrabold uppercase tracking-widest bg-blue-600 text-white px-1.5 py-0.5 rounded">
-                AI
-              </span>
-            </div>
-            <p className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold hidden sm:block">
-              E-commerce Intelligence
-            </p>
-          </div>
+          <Logo size="sm" variant="full" />
         </button>
 
         {/* Navigation items for landing vs app */}
@@ -52,9 +43,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           <nav className="hidden md:flex items-center gap-8 text-xs font-bold uppercase tracking-wider text-slate-300">
             <a href="#features" className="hover:text-white transition-colors">
               How It Works
-            </a>
-            <a href="#demo" className="hover:text-white transition-colors">
-              Live Demo
             </a>
             <a href="#pricing" className="hover:text-white transition-colors">
               Pricing (₦)
@@ -70,13 +58,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               <Layers className="w-3.5 h-3.5 text-blue-400" />
               <span className="text-xs">
                 Products: <strong className="text-white font-bold">{productCount}</strong> /{' '}
-                {tierLimit === 999 ? 'Unlimited' : tierLimit}
+                {tierLimit >= 999 ? 'Unlimited' : tierLimit}
               </span>
               <div className="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-blue-500 rounded-full transition-all duration-300"
                   style={{
-                    width: `${Math.min(100, (productCount / (tierLimit === 999 ? 10 : tierLimit)) * 100)}%`,
+                    width: tierLimit >= 999 ? '100%' : `${Math.min(100, (productCount / tierLimit) * 100)}%`,
                   }}
                 />
               </div>
@@ -87,9 +75,21 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => onSelectView('billing')}
               className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
             >
-              <Zap className="w-3.5 h-3.5 text-amber-400" />
-              <span>{user?.planTier || 'Starter'} Plan</span>
+              <Zap className={`w-3.5 h-3.5 ${isAdminOrPro ? 'text-amber-400 fill-amber-400' : 'text-amber-400'}`} />
+              <span>{isAdminOrPro ? 'Pro / Unlimited' : `${user?.planTier || 'Starter'} Plan`}</span>
             </button>
+
+            {/* Tour Guide Button */}
+            {onOpenTour && (
+              <button
+                onClick={onOpenTour}
+                className="bg-blue-900/50 hover:bg-blue-900/80 text-blue-300 border border-blue-700/50 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
+                title="Start Product Tour"
+              >
+                <Compass className="w-3.5 h-3.5 text-blue-400" />
+                <span>Product Tour</span>
+              </button>
+            )}
           </div>
         )}
 

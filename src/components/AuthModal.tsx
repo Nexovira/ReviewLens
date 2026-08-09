@@ -3,6 +3,8 @@ import { X, Mail, Lock, Store, Sparkles, ArrowRight, ShieldCheck, Check } from '
 import { UserProfile, PlanTier } from '../types';
 import { SAMPLE_USER } from '../data/sampleData';
 import { setStoredUser } from '../lib/supabaseClient';
+import { signInUser, signUpUser, signInWithGoogleAuth } from '../lib/firebaseService';
+import { Logo } from './Logo';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -13,8 +15,8 @@ interface AuthModalProps {
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, defaultPlan = 'Growth' }) => {
   const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('storeowner@lumina-commerce.com');
-  const [password, setPassword] = useState('••••••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [storeName, setStoreName] = useState('Lumina Store');
   const [selectedPlan, setSelectedPlan] = useState<PlanTier>(defaultPlan);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,34 +24,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg('');
 
-    setTimeout(() => {
+    try {
+      let user: UserProfile;
+      if (isLogin) {
+        user = await signInUser(email, password);
+      } else {
+        user = await signUpUser(email, password, storeName, selectedPlan);
+      }
       setIsLoading(false);
-      const user: UserProfile = {
-        id: `usr_${Math.random().toString(36).substring(2, 9)}`,
-        email: email || 'storeowner@lumina-commerce.com',
-        storeName: storeName || 'E-commerce Brand',
-        planTier: selectedPlan,
-        createdAt: new Date().toISOString(),
-      };
-      setStoredUser(user);
       onSuccess(user);
       onClose();
-    }, 600);
+    } catch (err: any) {
+      console.error('Auth error:', err);
+      setIsLoading(false);
+      setErrorMsg(err.message || 'Authentication failed. Please check credentials.');
+    }
   };
 
-  const handleDemoLogin = () => {
+  const handleGoogleLogin = async () => {
     setIsLoading(true);
-    setTimeout(() => {
+    setErrorMsg('');
+    try {
+      const user = await signInWithGoogleAuth();
       setIsLoading(false);
-      setStoredUser(SAMPLE_USER);
-      onSuccess(SAMPLE_USER);
+      onSuccess(user);
       onClose();
-    }, 400);
+    } catch (err: any) {
+      console.error('Google auth error:', err);
+      setIsLoading(false);
+      setErrorMsg(err.message || 'Google sign-in failed.');
+    }
   };
 
   return (
@@ -65,11 +74,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center mx-auto mb-3">
-            <Sparkles className="w-5 h-5" />
+          <div className="flex justify-center mb-3">
+            <Logo size="md" variant="full" lightMode={true} />
           </div>
-          <h2 className="text-2xl font-black text-slate-900">
-            {isLogin ? 'Sign In to ReviewLens' : 'Create Store Account'}
+          <h2 className="text-xl font-black text-slate-900 mt-2">
+            {isLogin ? 'Sign In to Your Account' : 'Create Store Account'}
           </h2>
           <p className="text-xs text-slate-500 mt-1 font-medium">
             {isLogin
@@ -78,26 +87,44 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           </p>
         </div>
 
-        {/* Quick Demo Login Option */}
-        <div className="mb-6 bg-blue-50/80 border border-blue-200 rounded-xl p-3.5 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-black text-blue-900">Instant Demo Mode</p>
-            <p className="text-[11px] text-blue-700 font-medium">Preloaded with sample product reports</p>
-          </div>
-          <button
-            onClick={handleDemoLogin}
-            disabled={isLoading}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-1 transition-colors"
-          >
-            Instant Login
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        {/* Google Sign In Button */}
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          disabled={isLoading}
+          className="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs transition-colors flex items-center justify-center gap-2 mb-4 shadow-sm"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <path
+              fill="#4285F4"
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+            />
+            <path
+              fill="#EA4335"
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+            />
+          </svg>
+          <span>Continue with Google</span>
+        </button>
 
-        <div className="relative flex py-1 items-center mb-6">
+        {errorMsg && (
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold p-3 rounded-xl">
+            {errorMsg}
+          </div>
+        )}
+
+        <div className="relative flex py-1 items-center mb-4">
           <div className="flex-grow border-t border-slate-200"></div>
           <span className="flex-shrink mx-3 text-[10px] text-slate-400 font-extrabold uppercase tracking-[0.2em]">
-            Or with Email
+            Or Email & Password
           </span>
           <div className="flex-grow border-t border-slate-200"></div>
         </div>

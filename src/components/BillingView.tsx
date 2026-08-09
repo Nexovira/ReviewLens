@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CreditCard, Check, Zap, Layers, ShieldCheck, ArrowRight, ExternalLink, Sparkles } from 'lucide-react';
 import { UserProfile, PlanTier } from '../types';
 import { getTierProductLimit, updatePlanTierInStorage } from '../lib/supabaseClient';
+import { saveUserProfile } from '../lib/firebaseService';
 
 interface BillingViewProps {
   user: UserProfile | null;
@@ -72,16 +73,25 @@ export const BillingView: React.FC<BillingViewProps> = ({
     setIsPaystackOpen(true);
   };
 
-  const handleCompletePaystackPayment = () => {
+  const handleCompletePaystackPayment = async () => {
     setIsProcessing(true);
-    setTimeout(() => {
+    try {
+      const updated = updatePlanTierInStorage(selectedTier);
+      if (user) {
+        const fullProfile = { ...user, planTier: selectedTier };
+        await saveUserProfile(fullProfile);
+        onUpdateUser(fullProfile);
+      } else {
+        onUpdateUser(updated);
+      }
       setIsProcessing(false);
       setIsPaystackOpen(false);
-      const updated = updatePlanTierInStorage(selectedTier);
-      onUpdateUser(updated);
       setPaymentSuccessMsg(`Success! Your subscription has been upgraded to ${selectedTier} Plan.`);
       setTimeout(() => setPaymentSuccessMsg(''), 4000);
-    }, 1000);
+    } catch (err) {
+      console.error('Error updating plan:', err);
+      setIsProcessing(false);
+    }
   };
 
   return (
