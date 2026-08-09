@@ -126,6 +126,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       const errStr = String(err?.code || err?.message || '');
       if (errStr.includes('unauthorized-domain')) {
         setErrorMsg('This hosting domain is not added to Firebase Console Authorized Domains. Click below to continue in Local Session mode.');
+      } else if (errStr.includes('popup-blocked')) {
+        setErrorMsg('The sign-in pop-up was blocked by your browser. Click below to continue in Offline / Local Mode.');
       } else if (errStr.includes('operation-not-allowed')) {
         setErrorMsg('Google Sign-In is disabled in Firebase Console. Enable "Google" under Firebase Console -> Authentication -> Sign-in method.');
       } else {
