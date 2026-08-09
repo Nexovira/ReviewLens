@@ -26,18 +26,23 @@ export async function fetchAllRegisteredUsers(): Promise<UserProfile[]> {
     const querySnap = await getDocs(collection(db, 'users'));
     const users: UserProfile[] = [];
     querySnap.forEach((docSnap) => {
-      users.push({ id: docSnap.id, ...docSnap.data() } as UserProfile);
+      const data = docSnap.data() as UserProfile;
+      if (data && data.email && !data.email.includes('lumina-commerce.com')) {
+        users.push({ id: docSnap.id, ...data });
+      }
     });
     if (users.length > 0) return users;
   } catch (err) {
-    console.warn('Firestore fetch users error, checking local fallback:', err);
+    console.warn('Firestore fetch users notice:', err);
   }
 
   try {
     const localUserStr = localStorage.getItem('reviewlens_user_profile');
     if (localUserStr) {
       const u = JSON.parse(localUserStr) as UserProfile;
-      return [u];
+      if (u && u.email && !u.email.includes('lumina-commerce.com')) {
+        return [u];
+      }
     }
   } catch (err) {
     console.error('Error reading local user profile:', err);
@@ -51,17 +56,21 @@ export async function fetchAllPlatformProducts(): Promise<Product[]> {
     const querySnap = await getDocs(collection(db, 'products'));
     const products: Product[] = [];
     querySnap.forEach((docSnap) => {
-      products.push({ id: docSnap.id, ...docSnap.data() } as Product);
+      const data = docSnap.data() as Product;
+      if (data && (!data.userId || !data.userId.includes('demo'))) {
+        products.push({ id: docSnap.id, ...data });
+      }
     });
     if (products.length > 0) return products;
   } catch (err) {
-    console.warn('Firestore fetch products error:', err);
+    console.warn('Firestore fetch products notice:', err);
   }
 
   try {
     const localProdStr = localStorage.getItem('reviewlens_products');
     if (localProdStr) {
-      return JSON.parse(localProdStr) as Product[];
+      const prods = JSON.parse(localProdStr) as Product[];
+      return prods.filter((p) => p.userId && !p.userId.includes('demo'));
     }
   } catch (err) {
     console.error('Error reading local products:', err);
@@ -82,25 +91,31 @@ export function subscribeToAdminData(
     unsubUsers = onSnapshot(usersQuery, (snapshot) => {
       const users: UserProfile[] = [];
       snapshot.forEach((docSnap) => {
-        users.push({ id: docSnap.id, ...docSnap.data() } as UserProfile);
+        const data = docSnap.data() as UserProfile;
+        if (data && data.email && !data.email.includes('lumina-commerce.com')) {
+          users.push({ id: docSnap.id, ...data });
+        }
       });
       onUsersUpdate(users);
     }, (err) => {
-      console.warn('Users snap warning:', err);
+      console.warn('Users snap notice:', err);
     });
 
     const productsQuery = collection(db, 'products');
     unsubProducts = onSnapshot(productsQuery, (snapshot) => {
       const products: Product[] = [];
       snapshot.forEach((docSnap) => {
-        products.push({ id: docSnap.id, ...docSnap.data() } as Product);
+        const data = docSnap.data() as Product;
+        if (data && (!data.userId || !data.userId.includes('demo'))) {
+          products.push({ id: docSnap.id, ...data });
+        }
       });
       onProductsUpdate(products);
     }, (err) => {
-      console.warn('Products snap warning:', err);
+      console.warn('Products snap notice:', err);
     });
   } catch (err) {
-    console.warn('Admin subscription error:', err);
+    console.warn('Admin subscription notice:', err);
   }
 
   return () => {

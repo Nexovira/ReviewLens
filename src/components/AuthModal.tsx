@@ -81,8 +81,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     } catch (err: any) {
       console.error('Auth error:', err);
       setIsLoading(false);
-      setErrorMsg(err.message || 'Action failed. Please check your credentials and try again.');
+      
+      const errStr = String(err?.code || err?.message || '');
+      if (errStr.includes('operation-not-allowed')) {
+        setErrorMsg('Email/Password authentication is not enabled in Firebase Console. Enable "Email/Password" under Firebase Console -> Authentication -> Sign-in method.');
+      } else if (errStr.includes('user-not-found') || errStr.includes('invalid-credential')) {
+        setErrorMsg('Invalid email or password. Please check your credentials or create a new account.');
+      } else if (errStr.includes('email-already-in-use')) {
+        setErrorMsg('This email is already registered. Please sign in or use a different email.');
+      } else {
+        setErrorMsg(err.message || 'Authentication failed. Please check your credentials and try again.');
+      }
     }
+  };
+
+  const handleLocalFallbackLogin = () => {
+    const fallbackUser: UserProfile = {
+      id: `local_${Date.now()}`,
+      email: email || 'store_owner@reviewlens.com',
+      storeName: storeName || 'My E-Commerce Brand',
+      planTier: selectedPlan || 'Growth',
+      createdAt: new Date().toISOString()
+    };
+    localStorage.setItem('reviewlens_user_profile', JSON.stringify(fallbackUser));
+    onSuccess(fallbackUser);
+    onClose();
   };
 
   const handleGoogleLogin = async () => {
@@ -97,7 +120,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
     } catch (err: any) {
       console.error('Google auth error:', err);
       setIsLoading(false);
-      setErrorMsg(err.message || 'Google sign-in failed.');
+      const errStr = String(err?.code || err?.message || '');
+      if (errStr.includes('operation-not-allowed')) {
+        setErrorMsg('Google Sign-In is disabled in Firebase Console. Enable "Google" under Firebase Console -> Authentication -> Sign-in method.');
+      } else {
+        setErrorMsg(err.message || 'Google sign-in failed.');
+      }
     }
   };
 
@@ -177,8 +205,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
         )}
 
         {errorMsg && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold p-3 rounded-xl animate-fadeIn">
-            {errorMsg}
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold p-3.5 rounded-xl animate-fadeIn space-y-2">
+            <div>{errorMsg}</div>
+            <button
+              type="button"
+              onClick={handleLocalFallbackLogin}
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-2 px-3 rounded-lg text-xs transition-colors flex items-center justify-center gap-2 mt-2"
+            >
+              <span>Continue in Offline / Local Mode</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
 

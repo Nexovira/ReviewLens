@@ -59,20 +59,30 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ currentU
   // Load real users & products with realtime listener
   useEffect(() => {
     const unsubAdmin = subscribeToAdminData(
-      (users) => setUsersList(users),
+      (users) => {
+        let merged = [...users];
+        if (currentUser && currentUser.email && !merged.some((u) => u.id === currentUser.id || u.email === currentUser.email)) {
+          merged.push(currentUser);
+        }
+        setUsersList(merged);
+      },
       (prods) => setProductsList(prods)
     );
 
     // Initial fetch fallback
     fetchAllRegisteredUsers().then((u) => {
-      if (u.length > 0) setUsersList(u);
+      let merged = [...u];
+      if (currentUser && currentUser.email && !merged.some((usr) => usr.id === currentUser.id || usr.email === currentUser.email)) {
+        merged.push(currentUser);
+      }
+      setUsersList(merged);
     });
     fetchAllPlatformProducts().then((p) => {
       if (p.length > 0) setProductsList(p);
     });
 
     return () => unsubAdmin();
-  }, []);
+  }, [currentUser]);
 
   const handleSavePrices = async (e: React.FormEvent) => {
     e.preventDefault();
