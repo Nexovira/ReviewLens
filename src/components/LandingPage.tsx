@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   BarChart3,
@@ -19,6 +19,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { PlanTier } from '../types';
+import { subscribeToTierPrices, formatPriceNaira, DEFAULT_PRICES, TierPrices } from '../lib/pricingService';
 
 interface LandingPageProps {
   onStartDemo: () => void;
@@ -29,6 +30,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartDemo, onSelectP
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [activePreviewTab, setActivePreviewTab] = useState<'sentiment' | 'features' | 'actionPlan'>('sentiment');
+  const [tierPrices, setTierPrices] = useState<TierPrices>(DEFAULT_PRICES);
+
+  useEffect(() => {
+    const unsub = subscribeToTierPrices((fetched) => {
+      setTierPrices(fetched);
+    });
+    return () => unsub();
+  }, []);
 
   const faqs = [
     {
@@ -321,7 +330,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartDemo, onSelectP
                 <h3 className="text-xl font-black text-slate-900">Starter</h3>
                 <p className="text-xs text-slate-500 font-medium mt-1">Perfect for solo store owners testing 1 key product.</p>
                 <div className="mt-6 flex items-baseline">
-                  <span className="text-4xl font-black text-slate-900">₦3,000</span>
+                  <span className="text-4xl font-black text-slate-900">{formatPriceNaira(tierPrices.Starter)}</span>
                   <span className="text-slate-500 font-bold text-xs ml-2">/ month</span>
                 </div>
                 <ul className="mt-8 space-y-3.5 text-xs text-slate-700 font-bold">
@@ -356,7 +365,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartDemo, onSelectP
                 <h3 className="text-xl font-black text-slate-900">Growth</h3>
                 <p className="text-xs text-slate-500 font-medium mt-1">Designed for growing e-commerce brands with multiple SKUs.</p>
                 <div className="mt-6 flex items-baseline">
-                  <span className="text-4xl font-black text-slate-900">₦8,000</span>
+                  <span className="text-4xl font-black text-slate-900">{formatPriceNaira(tierPrices.Growth)}</span>
                   <span className="text-slate-500 font-bold text-xs ml-2">/ month</span>
                 </div>
                 <ul className="mt-8 space-y-3.5 text-xs text-slate-700 font-bold">
@@ -391,7 +400,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartDemo, onSelectP
                 <h3 className="text-xl font-black text-slate-900">Pro</h3>
                 <p className="text-xs text-slate-500 font-medium mt-1">For agencies, high-volume sellers, and multi-brand operators.</p>
                 <div className="mt-6 flex items-baseline">
-                  <span className="text-4xl font-black text-slate-900">₦15,000</span>
+                  <span className="text-4xl font-black text-slate-900">{formatPriceNaira(tierPrices.Pro)}</span>
                   <span className="text-slate-500 font-bold text-xs ml-2">/ month</span>
                 </div>
                 <ul className="mt-8 space-y-3.5 text-xs text-slate-700 font-bold">

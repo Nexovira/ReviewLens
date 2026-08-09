@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CreditCard, Check, Zap, Layers, ShieldCheck, ArrowRight, ExternalLink, Sparkles } from 'lucide-react';
 import { UserProfile, PlanTier } from '../types';
 import { getTierProductLimit, updatePlanTierInStorage } from '../lib/supabaseClient';
 import { saveUserProfile } from '../lib/firebaseService';
+import { subscribeToTierPrices, formatPriceNaira, DEFAULT_PRICES, TierPrices } from '../lib/pricingService';
 
 interface BillingViewProps {
   user: UserProfile | null;
@@ -19,6 +20,14 @@ export const BillingView: React.FC<BillingViewProps> = ({
   const [isPaystackOpen, setIsPaystackOpen] = useState(false);
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [tierPrices, setTierPrices] = useState<TierPrices>(DEFAULT_PRICES);
+
+  useEffect(() => {
+    const unsub = subscribeToTierPrices((fetched) => {
+      setTierPrices(fetched);
+    });
+    return () => unsub();
+  }, []);
 
   const currentTier = user?.planTier || 'Starter';
   const tierLimit = getTierProductLimit(currentTier);
@@ -26,7 +35,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
   const plans = [
     {
       name: 'Starter' as PlanTier,
-      priceNaira: '₦3,000',
+      priceNaira: formatPriceNaira(tierPrices.Starter),
       period: 'per month',
       productsLimit: '1 Product',
       desc: 'Ideal for solo sellers auditing 1 flagship product.',
@@ -39,7 +48,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
     },
     {
       name: 'Growth' as PlanTier,
-      priceNaira: '₦8,000',
+      priceNaira: formatPriceNaira(tierPrices.Growth),
       period: 'per month',
       productsLimit: '5 Products',
       popular: true,
@@ -54,7 +63,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
     },
     {
       name: 'Pro' as PlanTier,
-      priceNaira: '₦15,000',
+      priceNaira: formatPriceNaira(tierPrices.Pro),
       period: 'per month',
       productsLimit: 'Unlimited Products',
       desc: 'For multi-brand operators, agencies & high-volume stores.',

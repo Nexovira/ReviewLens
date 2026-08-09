@@ -10,6 +10,7 @@ import {
   Zap,
   BarChart2,
   Compass,
+  ShieldCheck,
 } from 'lucide-react';
 import { UserProfile, PlanTier } from '../types';
 import { Logo } from './Logo';
@@ -133,6 +134,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </span>
             </button>
           )}
+
+          {/* Owner Admin Dashboard Option */}
+          <div className="pt-3 mt-3 border-t border-slate-800/80">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 px-2 mb-2">
+              Platform Controls
+            </p>
+            <button
+              onClick={() => onSelectView('admin')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-bold transition-all ${
+                currentView === 'admin'
+                  ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                  : 'text-amber-400/80 hover:text-amber-300 hover:bg-slate-800/60'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <span>Owner Admin</span>
+              </div>
+              <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                Owner
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import {
   googleProvider,
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
+  sendPasswordResetEmail,
   signOut, 
   onAuthStateChanged,
   signInWithPopup,
@@ -91,6 +92,11 @@ export async function signInUser(email: string, pass: string): Promise<UserProfi
     localStorage.setItem('reviewlens_user_profile', JSON.stringify(profile));
   }
   return profile;
+}
+
+// Reset Password via Email
+export async function resetUserPassword(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
 }
 
 // Sign In with Google

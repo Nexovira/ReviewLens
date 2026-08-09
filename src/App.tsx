@@ -7,6 +7,7 @@ import { AddProductModal } from './components/AddProductModal';
 import { CompetitorView } from './components/CompetitorView';
 import { ReportHistoryView } from './components/ReportHistoryView';
 import { BillingView } from './components/BillingView';
+import { AdminDashboardView } from './components/AdminDashboardView';
 import { AuthModal } from './components/AuthModal';
 import { PrintableReportView } from './components/PrintableReportView';
 import { TourGuideModal } from './components/TourGuideModal';
@@ -264,6 +265,12 @@ export default function App() {
                 user={user}
                 productCount={products.length}
                 onUpdateUser={setUser}
+              />
+            )}
+
+            {currentView === 'admin' && (
+              <AdminDashboardView
+                currentUser={user}
               />
             )}
           </main>

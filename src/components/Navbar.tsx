@@ -122,8 +122,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <p className="text-slate-400 text-[11px] truncate">{user.email}</p>
                   </div>
                   <button
+                    onClick={() => onSelectView('admin')}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-amber-300 hover:text-amber-200 hover:bg-slate-800 rounded-lg flex items-center gap-2 mt-1"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                    Owner Admin Control
+                  </button>
+                  <button
                     onClick={() => onSelectView('billing')}
-                    className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg flex items-center gap-2 mt-1"
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg flex items-center gap-2"
                   >
                     <Zap className="w-3.5 h-3.5 text-blue-400" />
                     Subscription & Billing
