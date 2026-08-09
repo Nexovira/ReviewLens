@@ -57,7 +57,8 @@ export default function App() {
             id: fbUser.uid,
             email: fbUser.email || 'user@store.com',
             storeName: fbUser.displayName || 'My E-Commerce Store',
-            planTier: 'Starter',
+            planTier: 'None',
+            subscriptionStatus: 'unsubscribed',
             createdAt: new Date().toISOString()
           };
           setUser(fallback);
@@ -103,7 +104,8 @@ export default function App() {
   const isUserLocked = (() => {
     if (!user) return false;
     if (isPlatformOwner(user)) return false;
-    const status = user.subscriptionStatus || 'free';
+    const status = user.subscriptionStatus || 'unsubscribed';
+    if (!user.planTier || user.planTier === 'None' || status === 'unsubscribed') return true;
     if (status === 'locked' || status === 'payment_failed' || status === 'expired') return true;
     if (status === 'trialing' && user.trialEndDate) {
       if (Date.now() > new Date(user.trialEndDate).getTime()) return true;

@@ -57,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'billing',
       label: 'Billing & Plan',
       icon: CreditCard,
-      badge: user?.planTier || 'Starter',
+      badge: user?.planTier && user.planTier !== 'None' ? user.planTier : 'Unsubscribed',
     },
   ];
 
@@ -164,8 +164,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Bottom Section */}
       <div className="p-4 border-t border-slate-800/80 space-y-3">
+        {/* Unsubscribed Callout */}
+        {(!user?.planTier || user?.planTier === 'None' || user?.subscriptionStatus === 'unsubscribed') && (
+          <div className="bg-slate-800/90 rounded-xl p-4 border border-slate-700 text-xs text-slate-200 shadow-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-bold text-amber-300 flex items-center gap-1">
+                <Zap className="w-3.5 h-3.5 fill-current" /> No Active Plan
+              </span>
+              <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Unsubscribed</span>
+            </div>
+            <p className="text-[11px] text-slate-300 leading-relaxed mb-3">
+              Subscribe to Growth or Pro with a 3-day trial to unlock full ReviewLens AI analysis.
+            </p>
+            <button
+              onClick={() => onSelectView('billing')}
+              className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition-colors shadow-md shadow-blue-600/20"
+            >
+              Select Plan & Start Trial
+            </button>
+          </div>
+        )}
+
         {/* Upgrade card if on Starter */}
-        {user?.planTier === 'Starter' && (
+        {user?.planTier === 'Starter' && user?.subscriptionStatus !== 'unsubscribed' && (
           <div className="bg-slate-800 rounded-xl p-4 border border-slate-700 text-xs text-slate-200">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-bold text-slate-200">Starter Plan</span>

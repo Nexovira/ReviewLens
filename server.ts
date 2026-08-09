@@ -37,7 +37,15 @@ function evaluateUserSubscription(user?: any): { locked: boolean; reason?: strin
 
   const userId = user.id || user.email;
   const storedUser = userSubscriptionsStore.get(userId) || user;
-  const status = storedUser.subscriptionStatus || 'free';
+  const status = storedUser.subscriptionStatus || 'unsubscribed';
+
+  if (status === 'unsubscribed' || storedUser.planTier === 'None' || !storedUser.subscriptionStatus) {
+    return {
+      locked: true,
+      reason: "You do not have an active subscription plan. Please select a plan (Starter, Growth, or Pro) and authorize your 3-day trial to start using ReviewLens AI.",
+      userProfile: storedUser
+    };
+  }
 
   if (status === 'locked' || status === 'payment_failed' || status === 'expired') {
     return {

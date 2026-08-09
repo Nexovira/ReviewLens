@@ -75,7 +75,8 @@ export function getTierProductLimit(tier: PlanTier, email?: string): number {
       return 5;
     case 'Pro':
       return 999999;
+    case 'None':
     default:
-      return 1;
+      return 0;
   }
 }

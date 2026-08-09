@@ -1,6 +1,6 @@
-export type PlanTier = 'Starter' | 'Growth' | 'Pro';
+export type PlanTier = 'None' | 'Starter' | 'Growth' | 'Pro';
 
-export type SubscriptionStatus = 'free' | 'trialing' | 'active' | 'payment_failed' | 'cancelled' | 'expired' | 'locked';
+export type SubscriptionStatus = 'unsubscribed' | 'free' | 'trialing' | 'active' | 'payment_failed' | 'cancelled' | 'expired' | 'locked';
 
 export interface UserProfile {
   id: string;

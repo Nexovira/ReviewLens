@@ -77,7 +77,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
             >
               <Zap className={`w-3.5 h-3.5 ${isUnlimited ? 'text-amber-400 fill-amber-400' : 'text-amber-400'}`} />
-              <span>{isUnlimited ? 'Pro / Unlimited' : `${user?.planTier || 'Starter'} Plan`}</span>
+              <span>
+                {isUnlimited
+                  ? 'Pro / Unlimited'
+                  : (!user?.planTier || user.planTier === 'None' || user.subscriptionStatus === 'unsubscribed')
+                  ? 'No Active Plan'
+                  : user.subscriptionStatus === 'trialing'
+                  ? `${user.planTier} (3-Day Trial)`
+                  : `${user.planTier} Plan`}
+              </span>
             </button>
 
             {/* Tour Guide Button */}

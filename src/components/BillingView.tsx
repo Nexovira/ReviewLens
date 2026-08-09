@@ -30,9 +30,10 @@ export const BillingView: React.FC<BillingViewProps> = ({
     return () => unsub();
   }, []);
 
-  const currentTier = user?.planTier || 'Starter';
+  const isUnsubscribed = !user?.planTier || user.planTier === 'None' || user.subscriptionStatus === 'unsubscribed';
+  const currentTier = isUnsubscribed ? 'None' : user.planTier;
   const tierLimit = getTierProductLimit(currentTier);
-  const subStatus = user?.subscriptionStatus || 'free';
+  const subStatus = user?.subscriptionStatus || 'unsubscribed';
 
   const plans = [
     {
@@ -162,13 +163,14 @@ export const BillingView: React.FC<BillingViewProps> = ({
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400 block">Current Plan & Status</span>
             <div className="text-base font-black text-white flex items-center gap-2 mt-1">
               <Zap className="w-4 h-4 text-amber-400" />
-              <span>{currentTier} Plan</span>
+              <span>{isUnsubscribed ? 'No Active Plan' : `${currentTier} Plan`}</span>
               <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
                 subStatus === 'trialing' ? 'bg-amber-400/20 text-amber-300 border-amber-400/30' :
                 subStatus === 'active' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
+                isUnsubscribed ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
                 'bg-red-500/20 text-red-300 border-red-500/30'
               }`}>
-                {subStatus === 'trialing' ? '3-Day Trial' : subStatus}
+                {subStatus === 'trialing' ? '3-Day Trial' : isUnsubscribed ? 'Unsubscribed' : subStatus}
               </span>
             </div>
           </div>

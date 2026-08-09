@@ -102,7 +102,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       id: `local_${Date.now()}`,
       email: email || 'store_owner@reviewlens.com',
       storeName: storeName || 'My E-Commerce Brand',
-      planTier: selectedPlan || 'Starter',
+      planTier: 'None',
+      subscriptionStatus: 'unsubscribed',
       createdAt: new Date().toISOString()
     };
     localStorage.setItem('reviewlens_user_profile', JSON.stringify(fallbackUser));

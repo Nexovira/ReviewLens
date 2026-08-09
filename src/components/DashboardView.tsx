@@ -192,8 +192,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         );
       })()}
 
+      {/* Unsubscribed / No Active Plan Banner */}
+      {(!user?.planTier || user?.planTier === 'None' || user?.subscriptionStatus === 'unsubscribed') && (
+        <div className="bg-gradient-to-r from-amber-950 via-[#0F172A] to-slate-900 border border-amber-500/40 rounded-2xl p-4 sm:p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg relative overflow-hidden">
+          <div className="flex items-center gap-3.5 z-10">
+            <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/40 text-amber-300 flex items-center justify-center shrink-0 shadow-inner">
+              <Zap className="w-5 h-5 fill-amber-400 text-amber-400 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white flex items-center gap-2">
+                <span>No Active Subscription Plan</span>
+                <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[9px] px-2 py-0.5 rounded-full uppercase font-black tracking-wider">
+                  Unsubscribed
+                </span>
+              </p>
+              <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
+                You have not subscribed to a plan yet. Select a plan (Starter, Growth, or Pro) and authorize your 3-day trial to start analyzing customer reviews and competitor intelligence.
+              </p>
+            </div>
+          </div>
+          {onOpenBilling && (
+            <button
+              onClick={onOpenBilling}
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shrink-0 flex items-center gap-1.5 z-10 transform hover:-translate-y-0.5"
+            >
+              <span>Select Plan & Start Trial</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Starter Plan Banner if user hasn't subscribed to Growth/Pro and not in trial */}
-      {user?.planTier === 'Starter' && user?.subscriptionStatus !== 'trialing' && (
+      {user?.planTier === 'Starter' && user?.subscriptionStatus !== 'trialing' && user?.subscriptionStatus !== 'unsubscribed' && (
         <div className="bg-gradient-to-r from-slate-900 via-[#0F172A] to-blue-950 border border-blue-500/30 rounded-2xl p-4 sm:p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg relative overflow-hidden">
           <div className="flex items-center gap-3.5 z-10">
             <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/40 text-amber-300 flex items-center justify-center shrink-0 shadow-inner">
