@@ -1,0 +1,6 @@
+{
+  "name": "ReviewLens",
+  "description": "AI-powered review analytics platform for e-commerce store owners to uncover customer insights, track sentiment, compare competitors, and generate action plans.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
