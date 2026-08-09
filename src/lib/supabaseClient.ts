@@ -1,10 +1,9 @@
 import { UserProfile, Product, PlanTier } from '../types';
-import { SAMPLE_USER, SAMPLE_PRODUCTS } from '../data/sampleData';
 
 const LOCAL_STORAGE_KEY_USER = 'reviewlens_user_profile';
 const LOCAL_STORAGE_KEY_PRODUCTS = 'reviewlens_products';
 
-export function getStoredUser(): UserProfile {
+export function getStoredUser(): UserProfile | null {
   const stored = localStorage.getItem(LOCAL_STORAGE_KEY_USER);
   if (stored) {
     try {
@@ -13,9 +12,7 @@ export function getStoredUser(): UserProfile {
       // Fallback
     }
   }
-  // Initialize with sample user if none exists
-  localStorage.setItem(LOCAL_STORAGE_KEY_USER, JSON.stringify(SAMPLE_USER));
-  return SAMPLE_USER;
+  return null;
 }
 
 export function setStoredUser(user: UserProfile): void {
@@ -31,9 +28,7 @@ export function getStoredProducts(): Product[] {
       // Fallback
     }
   }
-  // Initialize with sample products if key has never been set
-  localStorage.setItem(LOCAL_STORAGE_KEY_PRODUCTS, JSON.stringify(SAMPLE_PRODUCTS));
-  return SAMPLE_PRODUCTS;
+  return [];
 }
 
 export function setStoredProducts(products: Product[]): void {
@@ -61,8 +56,9 @@ export function deleteStoredProduct(productId: string): Product[] {
   return updated;
 }
 
-export function updatePlanTierInStorage(newTier: PlanTier): UserProfile {
+export function updatePlanTierInStorage(newTier: PlanTier): UserProfile | null {
   const user = getStoredUser();
+  if (!user) return null;
   const updated = { ...user, planTier: newTier };
   setStoredUser(updated);
   return updated;

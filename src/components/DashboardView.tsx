@@ -71,15 +71,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   if (!selectedProduct) {
     return (
-      <div className="p-8 text-center bg-slate-900/50 rounded-2xl border border-slate-800 my-12 max-w-xl mx-auto text-slate-300">
-        <Sparkles className="w-12 h-12 text-indigo-400 mx-auto mb-4" />
-        <h3 className="text-xl font-bold text-white">No Products Analyzed Yet</h3>
-        <p className="text-xs text-slate-400 mt-2 mb-6">
-          Paste your customer reviews or product link to generate your first AI review intelligence report.
+      <div className="p-10 text-center bg-white rounded-2xl border border-slate-200 shadow-sm my-8 max-w-xl mx-auto text-slate-700">
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-4">
+          <Sparkles className="w-7 h-7" />
+        </div>
+        <h3 className="text-xl font-black text-slate-900">No Products Analyzed Yet</h3>
+        <p className="text-xs text-slate-500 mt-2 mb-6 leading-relaxed max-w-md mx-auto">
+          Upload your first customer reviews to discover what your customers really think and generate actionable AI insights.
         </p>
         <button
           onClick={onOpenAddProduct}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-5 py-3 rounded-xl shadow-md transition-all inline-flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-6 py-3.5 rounded-xl shadow-md transition-all inline-flex items-center gap-2"
         >
           <PlusCircle className="w-4 h-4" />
           Add First Product

@@ -78,6 +78,20 @@ export const CompetitorView: React.FC<CompetitorViewProps> = ({ user, products, 
     }
   };
 
+  if (products.length === 0) {
+    return (
+      <div className="p-10 text-center bg-white rounded-2xl border border-slate-200 shadow-sm my-8 max-w-xl mx-auto text-slate-700">
+        <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto mb-4">
+          <GitCompare className="w-7 h-7" />
+        </div>
+        <h3 className="text-xl font-black text-slate-900">No Products Available for Comparison</h3>
+        <p className="text-xs text-slate-500 mt-2 leading-relaxed max-w-md mx-auto">
+          Add your first product review report to start benchmarking against your key market competitors.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fadeIn text-slate-900 relative pb-12">
       {/* Paywall Overlay for Starter Users */}

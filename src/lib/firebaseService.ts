@@ -19,7 +19,6 @@ import {
   FirebaseUser
 } from './firebase';
 import { UserProfile, Product, PlanTier } from '../types';
-import { SAMPLE_USER, SAMPLE_PRODUCTS } from '../data/sampleData';
 
 // Save/Update User Profile in Firestore
 export async function saveUserProfile(profile: UserProfile): Promise<void> {
@@ -69,18 +68,7 @@ export async function signUpUser(
 
   await saveUserProfile(profile);
 
-  // Seed initial sample product for new user if they have none
-  try {
-    const sampleProduct = {
-      ...SAMPLE_PRODUCTS[0],
-      id: `prod_${Date.now()}_1`,
-      userId: uid
-    };
-    await saveProductToFirestore(sampleProduct, uid);
-  } catch (e) {
-    console.error('Error seeding initial product:', e);
-  }
-
+  // New accounts start with 0 products (no mock seeding)
   return profile;
 }
 
@@ -121,18 +109,6 @@ export async function signInWithGoogleAuth(): Promise<UserProfile> {
       createdAt: new Date().toISOString()
     };
     await saveUserProfile(profile);
-
-    // Seed sample product
-    try {
-      const sampleProduct = {
-        ...SAMPLE_PRODUCTS[0],
-        id: `prod_${Date.now()}_1`,
-        userId: uid
-      };
-      await saveProductToFirestore(sampleProduct, uid);
-    } catch (e) {
-      console.error('Error seeding initial product:', e);
-    }
   } else {
     localStorage.setItem('reviewlens_user_profile', JSON.stringify(profile));
   }
@@ -148,6 +124,7 @@ export async function logoutUser(): Promise<void> {
     console.error('Signout error:', err);
   }
   localStorage.removeItem('reviewlens_user_profile');
+  localStorage.removeItem('reviewlens_products');
 }
 
 // Firestore Products Realtime Listener
@@ -155,18 +132,8 @@ export function subscribeToUserProducts(
   uid: string, 
   onProductsUpdated: (products: Product[]) => void
 ) {
-  // If no user is authenticated with Firebase or if this is a demo user, use local cache/sample data
   if (!auth.currentUser || auth.currentUser.uid !== uid) {
-    const cached = localStorage.getItem('reviewlens_products');
-    if (cached) {
-      try {
-        onProductsUpdated(JSON.parse(cached));
-      } catch {
-        onProductsUpdated(SAMPLE_PRODUCTS);
-      }
-    } else {
-      onProductsUpdated(SAMPLE_PRODUCTS);
-    }
+    onProductsUpdated([]);
     return () => {};
   }
 
@@ -177,30 +144,15 @@ export function subscribeToUserProducts(
       snapshot.forEach((docSnap) => {
         products.push({ id: docSnap.id, ...docSnap.data() } as Product);
       });
-      if (products.length === 0) {
-        // Fallback to local cache if empty
-        const cached = localStorage.getItem('reviewlens_products');
-        if (cached) {
-          try {
-            onProductsUpdated(JSON.parse(cached));
-            return;
-          } catch {}
-        }
-      } else {
-        localStorage.setItem('reviewlens_products', JSON.stringify(products));
-      }
+      localStorage.setItem('reviewlens_products', JSON.stringify(products));
       onProductsUpdated(products);
     }, (error) => {
       console.warn('Products snapshot notice:', error.message);
-      const cached = localStorage.getItem('reviewlens_products');
-      if (cached) {
-        try { onProductsUpdated(JSON.parse(cached)); } catch {}
-      } else {
-        onProductsUpdated(SAMPLE_PRODUCTS);
-      }
+      onProductsUpdated([]);
     });
   } catch (err) {
     console.warn('Failed to set up products listener:', err);
+    onProductsUpdated([]);
     return () => {};
   }
 }

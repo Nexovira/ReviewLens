@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, Store, Sparkles, ArrowRight, ShieldCheck, Check } from 'lucide-react';
+import { X, Mail, Lock, Store, Sparkles, ArrowRight, ShieldCheck, Check, Eye, EyeOff } from 'lucide-react';
 import { UserProfile, PlanTier } from '../types';
-import { SAMPLE_USER } from '../data/sampleData';
-import { setStoredUser } from '../lib/supabaseClient';
-import { signInUser, signUpUser, signInWithGoogleAuth } from '../lib/firebaseService';
+import { signInUser, signUpUser, signInWithGoogleAuth, logoutUser } from '../lib/firebaseService';
 import { Logo } from './Logo';
 
 interface AuthModalProps {
@@ -17,38 +15,68 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [storeName, setStoreName] = useState('Lumina Store');
   const [selectedPlan, setSelectedPlan] = useState<PlanTier>(defaultPlan);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   if (!isOpen) return null;
+
+  const toggleMode = (loginState: boolean) => {
+    setIsLogin(loginState);
+    setErrorMsg('');
+    setSuccessMsg('');
+    setPassword('');
+    setConfirmPassword('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
 
     try {
-      let user: UserProfile;
       if (isLogin) {
-        user = await signInUser(email, password);
+        const user = await signInUser(email, password);
+        setIsLoading(false);
+        onSuccess(user);
+        onClose();
       } else {
-        user = await signUpUser(email, password, storeName, selectedPlan);
+        if (password !== confirmPassword) {
+          setErrorMsg('Passwords do not match. Please ensure both passwords match.');
+          setIsLoading(false);
+          return;
+        }
+
+        // Create account in database
+        await signUpUser(email, password, storeName, selectedPlan);
+        
+        // Immediately sign out so user is NOT auto-logged in
+        await logoutUser();
+
+        setIsLoading(false);
+        // Redirect to sign in page
+        setIsLogin(true);
+        setPassword('');
+        setConfirmPassword('');
+        setSuccessMsg('Account created successfully! Please sign in with your email and password.');
       }
-      setIsLoading(false);
-      onSuccess(user);
-      onClose();
     } catch (err: any) {
       console.error('Auth error:', err);
       setIsLoading(false);
-      setErrorMsg(err.message || 'Authentication failed. Please check credentials.');
+      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
     }
   };
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
     try {
       const user = await signInWithGoogleAuth();
       setIsLoading(false);
@@ -115,8 +143,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           <span>Continue with Google</span>
         </button>
 
+        {successMsg && (
+          <div className="mb-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold p-3 rounded-xl flex items-center gap-2 animate-fadeIn">
+            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
         {errorMsg && (
-          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold p-3 rounded-xl">
+          <div className="mb-4 bg-red-50 border border-red-200 text-red-700 text-xs font-semibold p-3 rounded-xl animate-fadeIn">
             {errorMsg}
           </div>
         )}
@@ -174,15 +209,50 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
               <input
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-10 py-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 p-0.5 rounded focus:outline-none transition-colors"
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
+
+          {!isLogin && (
+            <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-1">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-10 py-2.5 text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-600"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700 p-0.5 rounded focus:outline-none transition-colors"
+                  title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+          )}
 
           {!isLogin && (
             <div>
@@ -227,7 +297,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             <p>
               Don't have an account?{' '}
               <button
-                onClick={() => setIsLogin(false)}
+                onClick={() => toggleMode(false)}
                 className="text-blue-600 font-extrabold hover:underline"
               >
                 Sign Up
@@ -237,7 +307,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
             <p>
               Already have an account?{' '}
               <button
-                onClick={() => setIsLogin(true)}
+                onClick={() => toggleMode(true)}
                 className="text-blue-600 font-extrabold hover:underline"
               >
                 Sign In

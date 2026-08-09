@@ -83,7 +83,20 @@ export const ReportHistoryView: React.FC<ReportHistoryViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
-              {filteredProducts.map((p) => (
+              {filteredProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <History className="w-8 h-8 text-slate-300" />
+                      <p className="font-bold text-slate-700 text-sm">No Saved Reports Found</p>
+                      <p className="text-xs text-slate-400 max-w-xs">
+                        Upload customer reviews to generate AI review analytics and track historical performance.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                filteredProducts.map((p) => (
                 <tr key={p.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="px-6 py-4">
                     <span className="font-extrabold text-slate-900 text-sm block truncate max-w-xs">{p.name}</span>
@@ -138,7 +151,8 @@ export const ReportHistoryView: React.FC<ReportHistoryViewProps> = ({
                     )}
                   </td>
                 </tr>
-              ))}
+              )))
+            }
             </tbody>
           </table>
         </div>

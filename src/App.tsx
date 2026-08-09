@@ -62,11 +62,7 @@ export default function App() {
           saveUserProfile(fallback);
         }
       } else {
-        // Fallback to local user or null
-        const local = getStoredUser();
-        if (local && local.id !== 'usr_demo_101') {
-          setUser(local);
-        }
+        setUser(null);
       }
     });
 
@@ -76,11 +72,8 @@ export default function App() {
   // Realtime products subscription when user is logged in
   useEffect(() => {
     if (!user) {
-      const stored = getStoredProducts();
-      setProducts(stored);
-      if (stored.length > 0 && !selectedProduct) {
-        setSelectedProduct(stored[0]);
-      }
+      setProducts([]);
+      setSelectedProduct(null);
       return;
     }
 
