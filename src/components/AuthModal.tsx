@@ -83,7 +83,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       setIsLoading(false);
       
       const errStr = String(err?.code || err?.message || '');
-      if (errStr.includes('operation-not-allowed')) {
+      if (errStr.includes('unauthorized-domain')) {
+        setErrorMsg('This hosting domain is not added to Firebase Console Authorized Domains. Click below to continue in Offline/Local Session mode.');
+      } else if (errStr.includes('operation-not-allowed')) {
         setErrorMsg('Email/Password authentication is not enabled in Firebase Console. Enable "Email/Password" under Firebase Console -> Authentication -> Sign-in method.');
       } else if (errStr.includes('user-not-found') || errStr.includes('invalid-credential')) {
         setErrorMsg('Invalid email or password. Please check your credentials or create a new account.');
@@ -121,7 +123,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       console.error('Google auth error:', err);
       setIsLoading(false);
       const errStr = String(err?.code || err?.message || '');
-      if (errStr.includes('operation-not-allowed')) {
+      if (errStr.includes('unauthorized-domain')) {
+        setErrorMsg('This hosting domain is not added to Firebase Console Authorized Domains. Click below to continue in Local Session mode.');
+      } else if (errStr.includes('operation-not-allowed')) {
         setErrorMsg('Google Sign-In is disabled in Firebase Console. Enable "Google" under Firebase Console -> Authentication -> Sign-in method.');
       } else {
         setErrorMsg(err.message || 'Google sign-in failed.');

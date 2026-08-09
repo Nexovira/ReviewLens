@@ -72,7 +72,9 @@ export async function signUpUser(
     return profile;
   } catch (err: any) {
     console.warn('Firebase signUp error, attempting fallback profile save:', err);
-    if (err?.code === 'auth/operation-not-allowed' || err?.message?.includes('operation-not-allowed')) {
+    const code = err?.code || '';
+    const msg = err?.message || '';
+    if (code === 'auth/operation-not-allowed' || code === 'auth/unauthorized-domain' || msg.includes('operation-not-allowed') || msg.includes('unauthorized-domain')) {
       const fallbackProfile: UserProfile = {
         id: `usr_${Date.now()}`,
         email: email,
@@ -109,7 +111,9 @@ export async function signInUser(email: string, pass: string): Promise<UserProfi
     return profile;
   } catch (err: any) {
     console.warn('Firebase signIn error, checking local fallback:', err);
-    if (err?.code === 'auth/operation-not-allowed' || err?.message?.includes('operation-not-allowed')) {
+    const code = err?.code || '';
+    const msg = err?.message || '';
+    if (code === 'auth/operation-not-allowed' || code === 'auth/unauthorized-domain' || msg.includes('operation-not-allowed') || msg.includes('unauthorized-domain')) {
       const savedUserStr = localStorage.getItem('reviewlens_user_profile');
       if (savedUserStr) {
         return JSON.parse(savedUserStr);
@@ -135,25 +139,47 @@ export async function resetUserPassword(email: string): Promise<void> {
 
 // Sign In with Google
 export async function signInWithGoogleAuth(): Promise<UserProfile> {
-  const res = await signInWithPopup(auth, googleProvider);
-  const user = res.user;
-  const uid = user.uid;
-  let profile = await getUserProfile(uid);
+  try {
+    const res = await signInWithPopup(auth, googleProvider);
+    const user = res.user;
+    const uid = user.uid;
+    let profile = await getUserProfile(uid);
 
-  if (!profile) {
-    profile = {
-      id: uid,
-      email: user.email || 'google_user@store.com',
-      storeName: user.displayName ? `${user.displayName}'s Store` : 'My E-Commerce Store',
-      planTier: 'Growth',
-      createdAt: new Date().toISOString()
-    };
-    await saveUserProfile(profile);
-  } else {
-    localStorage.setItem('reviewlens_user_profile', JSON.stringify(profile));
+    if (!profile) {
+      profile = {
+        id: uid,
+        email: user.email || 'google_user@store.com',
+        storeName: user.displayName ? `${user.displayName}'s Store` : 'My E-Commerce Store',
+        planTier: 'Growth',
+        createdAt: new Date().toISOString()
+      };
+      await saveUserProfile(profile);
+    } else {
+      localStorage.setItem('reviewlens_user_profile', JSON.stringify(profile));
+    }
+
+    return profile;
+  } catch (err: any) {
+    console.warn('Google Sign-In error, checking local fallback:', err);
+    const code = err?.code || '';
+    const msg = err?.message || '';
+    if (code === 'auth/operation-not-allowed' || code === 'auth/unauthorized-domain' || msg.includes('operation-not-allowed') || msg.includes('unauthorized-domain')) {
+      const savedUserStr = localStorage.getItem('reviewlens_user_profile');
+      if (savedUserStr) {
+        return JSON.parse(savedUserStr);
+      }
+      const fallbackProfile: UserProfile = {
+        id: `google_${Date.now()}`,
+        email: 'google_user@store.com',
+        storeName: 'My E-Commerce Store',
+        planTier: 'Growth',
+        createdAt: new Date().toISOString()
+      };
+      localStorage.setItem('reviewlens_user_profile', JSON.stringify(fallbackProfile));
+      return fallbackProfile;
+    }
+    throw err;
   }
-
-  return profile;
 }
 
 // Sign Out

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Sparkles, BarChart3, User, LogOut, Layers, ShieldCheck, Zap, Compass } from 'lucide-react';
-import { UserProfile } from '../types';
+import { UserProfile, isPlatformOwner } from '../types';
 import { getTierProductLimit } from '../lib/supabaseClient';
 import { Logo } from './Logo';
 
@@ -25,7 +25,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const isAppView = currentView !== 'landing';
   const tierLimit = user ? getTierProductLimit(user.planTier, user.email) : 1;
-  const isAdminOrPro = user && (user.planTier === 'Pro' || user.email.toLowerCase().includes('admin') || user.email.toLowerCase() === 'ummuunaysah2006@gmail.com');
+  const isOwner = isPlatformOwner(user);
+  const isUnlimited = isOwner || user?.planTier === 'Pro';
 
   return (
     <header className="sticky top-0 z-40 bg-[#0F172A] border-b border-slate-800 text-slate-100 shadow-sm">
@@ -75,8 +76,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => onSelectView('billing')}
               className="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
             >
-              <Zap className={`w-3.5 h-3.5 ${isAdminOrPro ? 'text-amber-400 fill-amber-400' : 'text-amber-400'}`} />
-              <span>{isAdminOrPro ? 'Pro / Unlimited' : `${user?.planTier || 'Starter'} Plan`}</span>
+              <Zap className={`w-3.5 h-3.5 ${isUnlimited ? 'text-amber-400 fill-amber-400' : 'text-amber-400'}`} />
+              <span>{isUnlimited ? 'Pro / Unlimited' : `${user?.planTier || 'Starter'} Plan`}</span>
             </button>
 
             {/* Tour Guide Button */}
@@ -121,13 +122,15 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <p className="font-bold text-white truncate">{user.storeName || 'Store Owner'}</p>
                     <p className="text-slate-400 text-[11px] truncate">{user.email}</p>
                   </div>
-                  <button
-                    onClick={() => onSelectView('admin')}
-                    className="w-full text-left px-3 py-2 text-xs font-semibold text-amber-300 hover:text-amber-200 hover:bg-slate-800 rounded-lg flex items-center gap-2 mt-1"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
-                    Owner Admin Control
-                  </button>
+                  {isOwner && (
+                    <button
+                      onClick={() => onSelectView('admin')}
+                      className="w-full text-left px-3 py-2 text-xs font-semibold text-amber-300 hover:text-amber-200 hover:bg-slate-800 rounded-lg flex items-center gap-2 mt-1"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                      Owner Admin Control
+                    </button>
+                  )}
                   <button
                     onClick={() => onSelectView('billing')}
                     className="w-full text-left px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg flex items-center gap-2"

@@ -9,6 +9,12 @@ export interface UserProfile {
   createdAt: string;
 }
 
+export function isPlatformOwner(user?: UserProfile | null): boolean {
+  if (!user || !user.email) return false;
+  const lower = user.email.toLowerCase().trim();
+  return lower.includes('ummuunaysah');
+}
+
 export interface StrengthComplaint {
   id: string;
   title: string;

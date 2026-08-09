@@ -11,7 +11,7 @@ import { AdminDashboardView } from './components/AdminDashboardView';
 import { AuthModal } from './components/AuthModal';
 import { PrintableReportView } from './components/PrintableReportView';
 import { TourGuideModal } from './components/TourGuideModal';
-import { UserProfile, Product, PlanTier } from './types';
+import { UserProfile, Product, PlanTier, isPlatformOwner } from './types';
 import {
   getStoredUser,
   getStoredProducts,
@@ -269,9 +269,27 @@ export default function App() {
             )}
 
             {currentView === 'admin' && (
-              <AdminDashboardView
-                currentUser={user}
-              />
+              isPlatformOwner(user) ? (
+                <AdminDashboardView
+                  currentUser={user}
+                />
+              ) : (
+                <div className="p-8 text-center bg-slate-900 border border-slate-800 rounded-2xl max-w-lg mx-auto my-12 text-slate-200 shadow-2xl">
+                  <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-4 font-black">
+                    !
+                  </div>
+                  <h2 className="text-lg font-bold text-white mb-2">Platform Owner Access Restricted</h2>
+                  <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+                    Only the platform owner account (<strong className="text-slate-200">ummuunaysah</strong>) is authorized to access the Owner Admin Dashboard.
+                  </p>
+                  <button
+                    onClick={() => setCurrentView('dashboard')}
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-blue-600/20"
+                  >
+                    Return to Store Dashboard
+                  </button>
+                </div>
+              )
             )}
           </main>
         </div>

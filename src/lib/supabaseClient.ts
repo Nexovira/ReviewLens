@@ -1,4 +1,4 @@
-import { UserProfile, Product, PlanTier } from '../types';
+import { UserProfile, Product, PlanTier, isPlatformOwner } from '../types';
 
 const LOCAL_STORAGE_KEY_USER = 'reviewlens_user_profile';
 const LOCAL_STORAGE_KEY_PRODUCTS = 'reviewlens_products';
@@ -65,11 +65,8 @@ export function updatePlanTierInStorage(newTier: PlanTier): UserProfile | null {
 }
 
 export function getTierProductLimit(tier: PlanTier, email?: string): number {
-  if (email) {
-    const lower = email.toLowerCase();
-    if (lower.includes('admin') || lower === 'ummuunaysah2006@gmail.com') {
-      return 999999;
-    }
+  if (email && isPlatformOwner({ email } as UserProfile)) {
+    return 999999;
   }
   switch (tier) {
     case 'Starter':
