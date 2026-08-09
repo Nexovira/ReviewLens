@@ -11,7 +11,7 @@ interface AuthModalProps {
   defaultPlan?: PlanTier;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, defaultPlan = 'Growth' }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess, defaultPlan = 'Starter' }) => {
   const [viewMode, setViewMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -102,7 +102,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
       id: `local_${Date.now()}`,
       email: email || 'store_owner@reviewlens.com',
       storeName: storeName || 'My E-Commerce Brand',
-      planTier: selectedPlan || 'Growth',
+      planTier: selectedPlan || 'Starter',
       createdAt: new Date().toISOString()
     };
     localStorage.setItem('reviewlens_user_profile', JSON.stringify(fallbackUser));

@@ -64,7 +64,7 @@ export async function signUpUser(
       id: uid,
       email: email,
       storeName: storeName || 'My E-Commerce Brand',
-      planTier: planTier || 'Growth',
+      planTier: planTier || 'Starter',
       createdAt: new Date().toISOString()
     };
 
@@ -79,7 +79,7 @@ export async function signUpUser(
         id: `usr_${Date.now()}`,
         email: email,
         storeName: storeName || 'My E-Commerce Brand',
-        planTier: planTier || 'Growth',
+        planTier: planTier || 'Starter',
         createdAt: new Date().toISOString()
       };
       localStorage.setItem('reviewlens_user_profile', JSON.stringify(fallbackProfile));
@@ -101,7 +101,7 @@ export async function signInUser(email: string, pass: string): Promise<UserProfi
         id: uid,
         email: email,
         storeName: 'My E-Commerce Brand',
-        planTier: 'Growth',
+        planTier: 'Starter',
         createdAt: new Date().toISOString()
       };
       await saveUserProfile(profile);
@@ -122,7 +122,7 @@ export async function signInUser(email: string, pass: string): Promise<UserProfi
         id: `usr_${Date.now()}`,
         email: email,
         storeName: 'My E-Commerce Brand',
-        planTier: 'Growth',
+        planTier: 'Starter',
         createdAt: new Date().toISOString()
       };
       localStorage.setItem('reviewlens_user_profile', JSON.stringify(fallbackProfile));
@@ -150,7 +150,7 @@ export async function signInWithGoogleAuth(): Promise<UserProfile> {
         id: uid,
         email: user.email || 'google_user@store.com',
         storeName: user.displayName ? `${user.displayName}'s Store` : 'My E-Commerce Store',
-        planTier: 'Growth',
+        planTier: 'Starter',
         createdAt: new Date().toISOString()
       };
       await saveUserProfile(profile);
@@ -172,7 +172,7 @@ export async function signInWithGoogleAuth(): Promise<UserProfile> {
         id: `google_${Date.now()}`,
         email: 'google_user@store.com',
         storeName: 'My E-Commerce Store',
-        planTier: 'Growth',
+        planTier: 'Starter',
         createdAt: new Date().toISOString()
       };
       localStorage.setItem('reviewlens_user_profile', JSON.stringify(fallbackProfile));

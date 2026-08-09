@@ -19,8 +19,10 @@ import {
   TrendingUp,
   Zap,
   Trash2,
+  ArrowRight,
+  Lock,
 } from 'lucide-react';
-import { Product, AnalysisResult, ActionItem } from '../types';
+import { Product, AnalysisResult, ActionItem, UserProfile } from '../types';
 import {
   PieChart,
   Pie,
@@ -35,6 +37,7 @@ import {
 } from 'recharts';
 
 interface DashboardViewProps {
+  user?: UserProfile | null;
   products: Product[];
   selectedProduct: Product | null;
   onSelectProduct: (product: Product) => void;
@@ -43,9 +46,11 @@ interface DashboardViewProps {
   onOpenPrintView: () => void;
   onDeleteProduct?: (productId: string) => void;
   isAnalyzing: boolean;
+  onOpenBilling?: () => void;
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({
+  user,
   products,
   selectedProduct,
   onSelectProduct,
@@ -54,6 +59,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenPrintView,
   onDeleteProduct,
   isAnalyzing,
+  onOpenBilling,
 }) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedStrength, setExpandedStrength] = useState<string | null>(null);
@@ -132,6 +138,91 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   return (
     <div className="space-y-6 animate-fadeIn text-slate-900 pb-16">
+      {/* 3-Day Trial Countdown Banner */}
+      {user?.subscriptionStatus === 'trialing' && user?.trialEndDate && (() => {
+        const now = Date.now();
+        const end = new Date(user.trialEndDate).getTime();
+        const diffHours = Math.max(0, Math.floor((end - now) / (1000 * 60 * 60)));
+        const diffDays = Math.ceil(diffHours / 24);
+        const plan = user.planTier || 'Growth';
+        const planPrice = plan === 'Pro' ? '₦15,000' : plan === 'Starter' ? '₦3,000' : '₦8,000';
+
+        const isEndingSoon = diffHours <= 24;
+
+        return (
+          <div className={`border rounded-2xl p-4 sm:p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg relative overflow-hidden transition-all ${
+            isEndingSoon
+              ? 'bg-gradient-to-r from-amber-950 via-slate-900 to-red-950 border-amber-500/50 ring-2 ring-amber-500/20'
+              : 'bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 border-blue-500/30'
+          }`}>
+            <div className="flex items-center gap-3.5 z-10">
+              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-inner ${
+                isEndingSoon ? 'bg-amber-400/20 border-amber-400/40 text-amber-300' : 'bg-blue-500/20 border-blue-400/40 text-blue-300'
+              }`}>
+                <Zap className="w-5 h-5 fill-current animate-pulse" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-white flex items-center gap-2">
+                  <span>{plan} 3-Day Trial: {diffDays > 1 ? `${diffDays} days remaining` : `${diffHours} hours remaining`}</span>
+                  <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-black tracking-wider border ${
+                    isEndingSoon ? 'bg-red-500/20 text-red-300 border-red-500/40' : 'bg-blue-500/20 text-blue-300 border-blue-500/40'
+                  }`}>
+                    {isEndingSoon ? 'Ends Tomorrow' : 'Trial Active'}
+                  </span>
+                </p>
+                <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
+                  {isEndingSoon ? (
+                    <>Your 3-day trial ends tomorrow. You'll be charged <strong>{planPrice}</strong> to continue using {plan} unless you cancel before the trial ends.</>
+                  ) : (
+                    <>Your payment method was authorized with Paystack. You will be charged <strong>{planPrice}</strong> after 3 days unless you cancel.</>
+                  )}
+                </p>
+              </div>
+            </div>
+            {onOpenBilling && (
+              <button
+                onClick={onOpenBilling}
+                className="bg-white hover:bg-slate-100 text-slate-900 font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shrink-0 flex items-center gap-1.5 z-10 transform hover:-translate-y-0.5"
+              >
+                <span>Manage Subscription</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Starter Plan Banner if user hasn't subscribed to Growth/Pro and not in trial */}
+      {user?.planTier === 'Starter' && user?.subscriptionStatus !== 'trialing' && (
+        <div className="bg-gradient-to-r from-slate-900 via-[#0F172A] to-blue-950 border border-blue-500/30 rounded-2xl p-4 sm:p-5 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg relative overflow-hidden">
+          <div className="flex items-center gap-3.5 z-10">
+            <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/40 text-amber-300 flex items-center justify-center shrink-0 shadow-inner">
+              <Zap className="w-5 h-5 fill-amber-400 text-amber-400 animate-pulse" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white flex items-center gap-2">
+                <span>Starter Plan Active (Limited Features)</span>
+                <span className="bg-amber-400/20 text-amber-300 border border-amber-400/40 text-[9px] px-2 py-0.5 rounded-full uppercase font-black tracking-wider">
+                  1 SKU Limit
+                </span>
+              </p>
+              <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
+                You are on the free Starter tier with 1 Product limit. Subscribe to <strong>Growth (₦8,000/mo)</strong> or <strong>Pro (₦20,000/mo)</strong> to analyze multiple SKUs and unlock Competitor Benchmarking.
+              </p>
+            </div>
+          </div>
+          {onOpenBilling && (
+            <button
+              onClick={onOpenBilling}
+              className="bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-blue-600/30 shrink-0 flex items-center gap-1.5 z-10 transform hover:-translate-y-0.5"
+            >
+              <span>Upgrade Subscription</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Top Controls Bar */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 text-slate-900 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
         {/* Product selector dropdown */}

@@ -11,19 +11,28 @@ import {
   AlertCircle,
   BarChart2,
   Layers,
+  Lock,
+  Zap,
 } from 'lucide-react';
-import { Product, AnalysisResult, ManualReviewEntry } from '../types';
+import { Product, AnalysisResult, ManualReviewEntry, UserProfile } from '../types';
+import { getTierProductLimit } from '../lib/supabaseClient';
 
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAnalyzeComplete: (product: Product) => void;
+  user?: UserProfile | null;
+  productCount?: number;
+  onOpenBilling?: () => void;
 }
 
 export const AddProductModal: React.FC<AddProductModalProps> = ({
   isOpen,
   onClose,
   onAnalyzeComplete,
+  user,
+  productCount = 0,
+  onOpenBilling,
 }) => {
   const [activeTab, setActiveTab] = useState<'paste' | 'manual'>('paste');
   const [productName, setProductName] = useState('');
@@ -41,6 +50,57 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   ]);
 
   if (!isOpen) return null;
+
+  const currentTier = user?.planTier || 'Starter';
+  const tierLimit = getTierProductLimit(currentTier, user?.email);
+  const isLimitReached = productCount >= tierLimit;
+
+  if (isLimitReached) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F172A]/80 backdrop-blur-sm animate-fadeIn text-slate-900">
+        <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative text-center">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 p-1 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto mb-4 shadow-sm">
+            <Lock className="w-7 h-7" />
+          </div>
+
+          <span className="text-[10px] font-black uppercase tracking-widest text-amber-700 bg-amber-100 px-3 py-1 rounded-full border border-amber-200">
+            {currentTier} Plan Limit Reached
+          </span>
+
+          <h3 className="text-xl font-black text-slate-900 mt-4 mb-2">Product SKU Limit Reached</h3>
+          <p className="text-xs text-slate-600 leading-relaxed mb-6">
+            Your <strong className="text-slate-900">{currentTier} plan</strong> is limited to <strong>{tierLimit} {tierLimit === 1 ? 'product SKU' : 'product SKUs'}</strong> ({productCount}/{tierLimit} active). Upgrade your plan to analyze more products simultaneously and unlock Competitor Benchmarking.
+          </p>
+
+          <div className="space-y-2.5">
+            <button
+              onClick={() => {
+                onClose();
+                if (onOpenBilling) onOpenBilling();
+              }}
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs py-3.5 rounded-xl shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5"
+            >
+              <Zap className="w-4 h-4 fill-white text-amber-300" />
+              <span>Upgrade Plan to Growth / Pro</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition-all"
+            >
+              Close Window
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleLoadSampleCorpus = () => {
     setProductName('Aura Sound Pro ANC Wireless Headphones');
@@ -107,10 +167,15 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
           productName: productName || 'New E-commerce Product',
           productUrl: asinOrUrl || 'Direct Review Paste',
           reviewText: textToAnalyze,
+          userProfile: user,
         }),
       });
 
       const responseData = await res.json();
+
+      if (res.status === 402 || responseData.error === 'SUBSCRIPTION_LOCKED') {
+        throw new Error(responseData.message || 'Your ReviewLens AI features are currently locked. Please update your payment method.');
+      }
 
       if (!responseData.success && !responseData.data) {
         throw new Error(responseData.error || 'Failed to complete review analysis.');

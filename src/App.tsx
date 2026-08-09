@@ -11,6 +11,7 @@ import { AdminDashboardView } from './components/AdminDashboardView';
 import { AuthModal } from './components/AuthModal';
 import { PrintableReportView } from './components/PrintableReportView';
 import { TourGuideModal } from './components/TourGuideModal';
+import { LockedOverlay } from './components/LockedOverlay';
 import { UserProfile, Product, PlanTier, isPlatformOwner } from './types';
 import {
   getStoredUser,
@@ -40,7 +41,7 @@ export default function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isTourOpen, setIsTourOpen] = useState(false);
-  const [authDefaultPlan, setAuthDefaultPlan] = useState<PlanTier>('Growth');
+  const [authDefaultPlan, setAuthDefaultPlan] = useState<PlanTier>('Starter');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // Listen to Firebase Auth state
@@ -56,7 +57,7 @@ export default function App() {
             id: fbUser.uid,
             email: fbUser.email || 'user@store.com',
             storeName: fbUser.displayName || 'My E-Commerce Store',
-            planTier: 'Growth',
+            planTier: 'Starter',
             createdAt: new Date().toISOString()
           };
           setUser(fallback);
@@ -98,6 +99,17 @@ export default function App() {
     setAuthDefaultPlan(tier);
     setIsAuthOpen(true);
   };
+
+  const isUserLocked = (() => {
+    if (!user) return false;
+    if (isPlatformOwner(user)) return false;
+    const status = user.subscriptionStatus || 'free';
+    if (status === 'locked' || status === 'payment_failed' || status === 'expired') return true;
+    if (status === 'trialing' && user.trialEndDate) {
+      if (Date.now() > new Date(user.trialEndDate).getTime()) return true;
+    }
+    return false;
+  })();
 
   const handleAuthSuccess = (updatedUser: UserProfile) => {
     setUser(updatedUser);
@@ -217,9 +229,22 @@ export default function App() {
           />
 
           {/* Main Dashboard Content Area */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-[#F1F5F9] overflow-y-auto min-h-[calc(100vh-4rem)]">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-[#F1F5F9] overflow-y-auto min-h-[calc(100vh-4rem)] relative">
+            {isUserLocked && currentView !== 'billing' && (
+              <LockedOverlay
+                user={user}
+                onOpenBilling={() => setCurrentView('billing')}
+                onSignOut={() => {
+                  logoutUser();
+                  setUser(null);
+                  setCurrentView('landing');
+                }}
+              />
+            )}
+
             {currentView === 'dashboard' && (
               <DashboardView
+                user={user}
                 products={products}
                 selectedProduct={selectedProduct}
                 onSelectProduct={setSelectedProduct}
@@ -228,6 +253,7 @@ export default function App() {
                 onOpenPrintView={() => setCurrentView('print')}
                 onDeleteProduct={handleDeleteProduct}
                 isAnalyzing={isAnalyzing}
+                onOpenBilling={() => setCurrentView('billing')}
               />
             )}
 
@@ -308,6 +334,9 @@ export default function App() {
         isOpen={isAddProductOpen}
         onClose={() => setIsAddProductOpen(false)}
         onAnalyzeComplete={handleAddProductComplete}
+        user={user}
+        productCount={products.length}
+        onOpenBilling={() => setCurrentView('billing')}
       />
 
       {/* Product Tour Guide Modal */}

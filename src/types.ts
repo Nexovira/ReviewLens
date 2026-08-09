@@ -1,5 +1,7 @@
 export type PlanTier = 'Starter' | 'Growth' | 'Pro';
 
+export type SubscriptionStatus = 'free' | 'trialing' | 'active' | 'payment_failed' | 'cancelled' | 'expired' | 'locked';
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -7,6 +9,14 @@ export interface UserProfile {
   storeName?: string;
   planTier: PlanTier;
   createdAt: string;
+  subscriptionStatus?: SubscriptionStatus;
+  trialStartDate?: string;
+  trialEndDate?: string;
+  subscriptionRef?: string;
+  customerRef?: string;
+  paymentMethodMasked?: string;
+  nextBillingDate?: string;
+  cancelAtPeriodEnd?: boolean;
 }
 
 export function isPlatformOwner(user?: UserProfile | null): boolean {

@@ -65,6 +65,7 @@ export const CompetitorView: React.FC<CompetitorViewProps> = ({ user, products, 
           mainReviews: mainProduct?.rawReviewCorpus || '',
           competitorProductName: competitorName,
           competitorReviews: competitorReviews,
+          userProfile: user,
         }),
       });
       const data = await res.json();

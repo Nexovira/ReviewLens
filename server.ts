@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import crypto from "crypto";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 
@@ -7,6 +8,62 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json({ limit: "10mb" }));
+
+// System Settings Configurable by Admin
+let systemSettings = {
+  trialDurationDays: 3,
+  trialsEnabled: true,
+  prices: {
+    Starter: 3000,
+    Growth: 8000,
+    Pro: 15000,
+  },
+  gracePeriodHours: 0,
+};
+
+// Server-side user subscription store (in-memory cache synced with client/Firestore)
+const userSubscriptionsStore = new Map<string, any>();
+
+function isPlatformOwnerEmail(email?: string): boolean {
+  if (!email) return false;
+  return email.toLowerCase().trim().includes("ummuunaysah");
+}
+
+function evaluateUserSubscription(user?: any): { locked: boolean; reason?: string; userProfile?: any } {
+  if (!user) return { locked: false };
+  if (isPlatformOwnerEmail(user.email)) {
+    return { locked: false };
+  }
+
+  const userId = user.id || user.email;
+  const storedUser = userSubscriptionsStore.get(userId) || user;
+  const status = storedUser.subscriptionStatus || 'free';
+
+  if (status === 'locked' || status === 'payment_failed' || status === 'expired') {
+    return {
+      locked: true,
+      reason: "Your ReviewLens AI features are currently locked. Your 3-day trial has ended and payment failed. Please update your payment method.",
+      userProfile: storedUser
+    };
+  }
+
+  if (status === 'trialing' && storedUser.trialEndDate) {
+    const now = Date.now();
+    const trialEnd = new Date(storedUser.trialEndDate).getTime();
+    if (now > trialEnd) {
+      // Trial has expired! Update status to locked
+      storedUser.subscriptionStatus = 'locked';
+      userSubscriptionsStore.set(userId, storedUser);
+      return {
+        locked: true,
+        reason: "Your 3-day trial has ended and we couldn't process your payment. Your ReviewLens AI features are currently locked.",
+        userProfile: storedUser
+      };
+    }
+  }
+
+  return { locked: false, userProfile: storedUser };
+}
 
 // Initialize GoogleGenAI lazily or when requested
 function getAIClient() {
@@ -159,6 +216,18 @@ const analysisSchema = {
 // Main AI analysis endpoint
 app.post("/api/analyze", async (req, res) => {
   try {
+    const userProfileRaw = req.body.userProfile || req.headers["x-user-profile"];
+    if (userProfileRaw) {
+      const profile = typeof userProfileRaw === "string" ? JSON.parse(userProfileRaw) : userProfileRaw;
+      const subCheck = evaluateUserSubscription(profile);
+      if (subCheck.locked) {
+        return res.status(402).json({
+          error: "SUBSCRIPTION_LOCKED",
+          message: subCheck.reason || "Your ReviewLens AI features are currently locked. Your 3-day trial has ended and payment failed. Please update your payment method.",
+        });
+      }
+    }
+
     const { productName, productUrl, reviewText } = req.body;
 
     if (!reviewText || typeof reviewText !== "string" || reviewText.trim().length < 10) {
@@ -235,6 +304,18 @@ Respond ONLY with valid JSON conforming strictly to the requested schema.`;
 // Endpoint for Competitor Comparison
 app.post("/api/compare", async (req, res) => {
   try {
+    const userProfileRaw = req.body.userProfile || req.headers["x-user-profile"];
+    if (userProfileRaw) {
+      const profile = typeof userProfileRaw === "string" ? JSON.parse(userProfileRaw) : userProfileRaw;
+      const subCheck = evaluateUserSubscription(profile);
+      if (subCheck.locked) {
+        return res.status(402).json({
+          error: "SUBSCRIPTION_LOCKED",
+          message: subCheck.reason || "Your ReviewLens AI features are currently locked. Your 3-day trial has ended and payment failed. Please update your payment method.",
+        });
+      }
+    }
+
     const { mainProductName, mainReviews, competitorProductName, competitorReviews } = req.body;
 
     const ai = getAIClient();
@@ -284,18 +365,24 @@ Return JSON with:
 // Paystack Payment Initialization Endpoint
 app.post("/api/paystack/initialize", async (req, res) => {
   try {
-    const { email, amount, planName } = req.body;
+    const { email, amount, planName, userId } = req.body;
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const planPrice = systemSettings.prices[planName as 'Starter' | 'Growth' | 'Pro'] || amount || 3000;
 
     if (!secretKey) {
-      // Return simulated link if key not configured yet
+      // Demo environment checkout response
+      const demoRef = "REF_TRIAL_" + Math.floor(Math.random() * 1000000000);
       return res.json({
         status: true,
-        message: "Demo checkout initialized (Paystack secret key not set yet)",
+        message: "Payment method authorization link created",
         data: {
-          authorization_url: "#demo-checkout",
-          access_code: "demo_access_code_" + Date.now(),
-          reference: "REF_" + Math.floor(Math.random() * 1000000000),
+          authorization_url: "#demo-paystack-trial",
+          access_code: "demo_access_" + Date.now(),
+          reference: demoRef,
+          planName: planName || "Growth",
+          amount: planPrice,
+          trialDurationDays: systemSettings.trialDurationDays,
+          disclosure: `Start your ${systemSettings.trialDurationDays}-day trial. Your payment method is required to start the trial. You will be charged ₦${planPrice.toLocaleString('en-NG')} after ${systemSettings.trialDurationDays} days unless you cancel before the trial ends.`
         },
       });
     }
@@ -308,16 +395,91 @@ app.post("/api/paystack/initialize", async (req, res) => {
       },
       body: JSON.stringify({
         email,
-        amount: (amount || 3000) * 100, // Paystack amount is in kobo (Naira * 100)
-        metadata: { planName },
+        amount: planPrice * 100, // Paystack amount is in kobo (Naira * 100)
+        metadata: {
+          planName,
+          userId,
+          isTrial: true,
+          trialDurationDays: systemSettings.trialDurationDays,
+          disclosureAccepted: true,
+        },
       }),
     });
 
     const data = await paystackRes.json();
+    if (data && data.data) {
+      data.data.planName = planName;
+      data.data.amount = planPrice;
+      data.data.trialDurationDays = systemSettings.trialDurationDays;
+      data.data.disclosure = `Start your ${systemSettings.trialDurationDays}-day trial. Your payment method is required to start the trial. You will be charged ₦${planPrice.toLocaleString('en-NG')} after ${systemSettings.trialDurationDays} days unless you cancel before the trial ends.`;
+    }
     return res.json(data);
   } catch (err: any) {
     console.error("Paystack init error:", err);
     return res.status(500).json({ status: false, message: "Payment initialization failed" });
+  }
+});
+
+// Paystack Payment / Trial Confirmation Endpoint
+app.post("/api/paystack/confirm-trial", async (req, res) => {
+  try {
+    const { reference, userId, email, planName, storeName, cardLast4, cardBrand: reqCardBrand } = req.body;
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+
+    let paystackAuthData: any = null;
+
+    if (secretKey && !reference.startsWith("REF_")) {
+      const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+        },
+      });
+      const verifyData = await paystackRes.json();
+      if (verifyData && verifyData.status && verifyData.data) {
+        paystackAuthData = verifyData.data.authorization || null;
+      }
+    }
+
+    const trialStart = new Date();
+    const trialDays = systemSettings.trialDurationDays || 3;
+    const trialEnd = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
+
+    const cardBrand = paystackAuthData?.card_type || reqCardBrand || "Paystack Card";
+    const last4 = paystackAuthData?.last4 || cardLast4 || "••••";
+    const maskedCard = `${cardBrand} •••• ${last4}`;
+
+    const uId = userId || `usr_${Date.now()}`;
+    const userEmail = email || "store_owner@reviewlens.com";
+    const selectedPlan = planName || "Growth";
+
+    const updatedProfile = {
+      id: uId,
+      email: userEmail,
+      storeName: storeName || "My E-Commerce Brand",
+      planTier: selectedPlan,
+      createdAt: new Date().toISOString(),
+      subscriptionStatus: "trialing",
+      trialStartDate: trialStart.toISOString(),
+      trialEndDate: trialEnd.toISOString(),
+      subscriptionRef: reference,
+      customerRef: paystackAuthData?.authorization_code || `CUST_${Date.now()}`,
+      paymentMethodMasked: maskedCard,
+      nextBillingDate: trialEnd.toISOString(),
+      cancelAtPeriodEnd: false,
+    };
+
+    userSubscriptionsStore.set(uId, updatedProfile);
+    userSubscriptionsStore.set(userEmail, updatedProfile);
+
+    return res.json({
+      success: true,
+      message: `${selectedPlan} ${trialDays}-Day Trial Activated Successfully`,
+      userProfile: updatedProfile,
+    });
+  } catch (err: any) {
+    console.error("Error confirming trial:", err);
+    return res.status(500).json({ success: false, message: "Trial confirmation failed" });
   }
 });
 
@@ -330,7 +492,7 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
     if (!secretKey || reference.startsWith("REF_")) {
       return res.json({
         status: true,
-        data: { status: "success", reference, amount: 300000 },
+        data: { status: "success", reference, amount: 800000 },
       });
     }
 
@@ -346,6 +508,136 @@ app.get("/api/paystack/verify/:reference", async (req, res) => {
   } catch (err: any) {
     console.error("Paystack verify error:", err);
     return res.status(500).json({ status: false, message: "Verification failed" });
+  }
+});
+
+// Paystack Webhook Handler
+app.post("/api/paystack/webhook", (req, res) => {
+  try {
+    const secretKey = process.env.PAYSTACK_SECRET_KEY;
+    const signature = req.headers["x-paystack-signature"];
+
+    if (secretKey && signature) {
+      const hash = crypto
+        .createHmac("sha512", secretKey)
+        .update(JSON.stringify(req.body))
+        .digest("hex");
+
+      if (hash !== signature) {
+        console.warn("Invalid Paystack webhook signature");
+        return res.status(400).send("Invalid signature");
+      }
+    }
+
+    const event = req.body;
+    console.log("Received Paystack webhook event:", event?.event);
+
+    if (event && event.data) {
+      const { customer, metadata } = event.data;
+      const email = customer?.email || metadata?.email;
+      const userId = metadata?.userId || email;
+
+      if (userId) {
+        const existing = userSubscriptionsStore.get(userId) || {};
+
+        if (event.event === "charge.success") {
+          existing.subscriptionStatus = "active";
+          existing.payment_failed = false;
+          existing.nextBillingDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+          userSubscriptionsStore.set(userId, existing);
+          if (email) userSubscriptionsStore.set(email, existing);
+        } else if (event.event === "invoice.payment_failed" || event.event === "charge.failed") {
+          existing.subscriptionStatus = "locked";
+          existing.payment_failed = true;
+          userSubscriptionsStore.set(userId, existing);
+          if (email) userSubscriptionsStore.set(email, existing);
+        } else if (event.event === "subscription.disable") {
+          existing.subscriptionStatus = "cancelled";
+          userSubscriptionsStore.set(userId, existing);
+          if (email) userSubscriptionsStore.set(email, existing);
+        }
+      }
+    }
+
+    return res.status(200).send("Webhook received");
+  } catch (err: any) {
+    console.error("Webhook processing error:", err);
+    return res.status(500).send("Webhook error");
+  }
+});
+
+// Cancel Subscription Endpoint
+app.post("/api/paystack/cancel-subscription", (req, res) => {
+  try {
+    const { userId, email } = req.body;
+    const targetId = userId || email;
+
+    if (targetId) {
+      const existing = userSubscriptionsStore.get(targetId) || { id: targetId, email };
+      existing.cancelAtPeriodEnd = true;
+      userSubscriptionsStore.set(targetId, existing);
+      return res.json({
+        success: true,
+        message: "Subscription set to cancel at end of trial/billing period.",
+        userProfile: existing,
+      });
+    }
+
+    return res.status(400).json({ success: false, message: "User identifier required" });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin Settings GET & POST Endpoints
+app.get("/api/admin/settings", (req, res) => {
+  return res.json({ success: true, data: systemSettings });
+});
+
+app.post("/api/admin/settings", (req, res) => {
+  try {
+    const { trialDurationDays, trialsEnabled, prices, gracePeriodHours } = req.body;
+    if (typeof trialDurationDays === "number") systemSettings.trialDurationDays = trialDurationDays;
+    if (typeof trialsEnabled === "boolean") systemSettings.trialsEnabled = trialsEnabled;
+    if (prices && typeof prices === "object") systemSettings.prices = { ...systemSettings.prices, ...prices };
+    if (typeof gracePeriodHours === "number") systemSettings.gracePeriodHours = gracePeriodHours;
+
+    return res.json({ success: true, message: "Admin system settings updated", data: systemSettings });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin Override User Subscription Endpoint
+app.post("/api/admin/user-subscription", (req, res) => {
+  try {
+    const { targetUserId, targetEmail, subscriptionStatus, planTier, extendDays } = req.body;
+    const targetKey = targetUserId || targetEmail;
+
+    if (!targetKey) {
+      return res.status(400).json({ success: false, message: "targetUserId or targetEmail required" });
+    }
+
+    const existing = userSubscriptionsStore.get(targetKey) || {
+      id: targetUserId || `usr_${Date.now()}`,
+      email: targetEmail,
+      planTier: planTier || "Growth",
+    };
+
+    if (subscriptionStatus) existing.subscriptionStatus = subscriptionStatus;
+    if (planTier) existing.planTier = planTier;
+    if (extendDays && typeof extendDays === "number") {
+      const currentEnd = existing.trialEndDate ? new Date(existing.trialEndDate).getTime() : Date.now();
+      existing.trialEndDate = new Date(currentEnd + extendDays * 86400000).toISOString();
+      existing.nextBillingDate = existing.trialEndDate;
+    }
+
+    userSubscriptionsStore.set(targetKey, existing);
+    if (targetEmail) userSubscriptionsStore.set(targetEmail, existing);
+
+    return res.json({ success: true, message: "User subscription updated by Admin", userProfile: existing });
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 });
 

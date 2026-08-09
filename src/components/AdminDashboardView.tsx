@@ -444,10 +444,15 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ currentU
           </div>
 
           {/* Owner policy reminder alert */}
-          <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-center gap-3 text-xs text-slate-600 font-medium">
-            <Lock className="w-4 h-4 text-slate-400 shrink-0" />
-            <span>
-              <strong>Automated Tier Lifecycle:</strong> Customer plan tiers update automatically when users execute subscription upgrades via Paystack or billing checkout. Manual tier modification is intentionally restricted to preserve automated subscription accounting.
+          <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex items-center justify-between gap-3 text-xs text-slate-600 font-medium">
+            <div className="flex items-center gap-3">
+              <Lock className="w-4 h-4 text-slate-400 shrink-0" />
+              <span>
+                <strong>Subscription Lifecycle Controls:</strong> Manage 3-day paid trial status, lock status, or extend trials for individual store accounts.
+              </span>
+            </div>
+            <span className="text-[10px] font-black uppercase text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200">
+              Admin Override Enabled
             </span>
           </div>
 
