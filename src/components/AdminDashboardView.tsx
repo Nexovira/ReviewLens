@@ -183,17 +183,22 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ currentU
   const paidGrowth = activePaidUsers.filter((u) => u.planTier === 'Growth').length;
   const paidPro = activePaidUsers.filter((u) => u.planTier === 'Pro').length;
 
+  // Fallback safe prices
+  const starterPrice = tierPrices?.Starter ?? DEFAULT_PRICES.Starter;
+  const growthPrice = tierPrices?.Growth ?? DEFAULT_PRICES.Growth;
+  const proPrice = tierPrices?.Pro ?? DEFAULT_PRICES.Pro;
+
   // Aggregated MRR from active paid subscriptions
   const activeMRR =
-    paidStarter * tierPrices.Starter +
-    paidGrowth * tierPrices.Growth +
-    paidPro * tierPrices.Pro;
+    paidStarter * starterPrice +
+    paidGrowth * growthPrice +
+    paidPro * proPrice;
 
   // Projected MRR including trialing conversions
   const projectedMRR =
-    starterCount * tierPrices.Starter +
-    growthCount * tierPrices.Growth +
-    proCount * tierPrices.Pro;
+    starterCount * starterPrice +
+    growthCount * growthPrice +
+    proCount * proPrice;
 
   // Filtered users
   const filteredUsers = usersList.filter((u) => {
@@ -810,7 +815,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ currentU
               {/* Starter */}
               <div>
                 <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-slate-700">Starter Plan (₦{tierPrices.Starter.toLocaleString()})</span>
+                  <span className="text-slate-700">Starter Plan (₦{(tierPrices?.Starter ?? 3000).toLocaleString()})</span>
                   <span className="text-slate-900">{starterCount} stores ({totalStores ? Math.round((starterCount / totalStores) * 100) : 0}%)</span>
                 </div>
                 <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
@@ -824,7 +829,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ currentU
               {/* Growth */}
               <div>
                 <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-blue-700">Growth Plan (₦{tierPrices.Growth.toLocaleString()})</span>
+                  <span className="text-blue-700">Growth Plan (₦{(tierPrices?.Growth ?? 8000).toLocaleString()})</span>
                   <span className="text-blue-900">{growthCount} stores ({totalStores ? Math.round((growthCount / totalStores) * 100) : 0}%)</span>
                 </div>
                 <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
@@ -838,7 +843,7 @@ export const AdminDashboardView: React.FC<AdminDashboardViewProps> = ({ currentU
               {/* Pro */}
               <div>
                 <div className="flex justify-between text-xs font-bold mb-1">
-                  <span className="text-purple-700">Pro Plan (₦{tierPrices.Pro.toLocaleString()})</span>
+                  <span className="text-purple-700">Pro Plan (₦{(tierPrices?.Pro ?? 15000).toLocaleString()})</span>
                   <span className="text-purple-900">{proCount} stores ({totalStores ? Math.round((proCount / totalStores) * 100) : 0}%)</span>
                 </div>
                 <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">

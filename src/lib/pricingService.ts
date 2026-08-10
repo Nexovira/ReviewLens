@@ -143,6 +143,9 @@ export function subscribeToSystemSettings(onUpdate: (settings: SystemSettings) =
   }
 }
 
-export function formatPriceNaira(amount: number): string {
-  return `₦${amount.toLocaleString('en-NG')}`;
+export function formatPriceNaira(amount?: number | null): string {
+  if (amount === undefined || amount === null || isNaN(Number(amount))) {
+    return '₦0';
+  }
+  return `₦${Number(amount).toLocaleString('en-NG')}`;
 }
