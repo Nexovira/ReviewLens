@@ -3,7 +3,7 @@ import { CreditCard, Check, Zap, Layers, ShieldCheck, ArrowRight, ExternalLink, 
 import { UserProfile, PlanTier } from '../types';
 import { getTierProductLimit, updatePlanTierInStorage } from '../lib/supabaseClient';
 import { saveUserProfile } from '../lib/firebaseService';
-import { subscribeToTierPrices, formatPriceNaira, DEFAULT_PRICES, TierPrices } from '../lib/pricingService';
+import { subscribeToTierPrices, subscribeToSystemSettings, formatPriceNaira, DEFAULT_PRICES, DEFAULT_SETTINGS, TierPrices, SystemSettings } from '../lib/pricingService';
 import { PaystackTrialModal } from './PaystackTrialModal';
 
 interface BillingViewProps {
@@ -22,12 +22,19 @@ export const BillingView: React.FC<BillingViewProps> = ({
   const [paymentSuccessMsg, setPaymentSuccessMsg] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
   const [tierPrices, setTierPrices] = useState<TierPrices>(DEFAULT_PRICES);
+  const [systemSettings, setSystemSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
     const unsub = subscribeToTierPrices((fetched) => {
       setTierPrices(fetched);
     });
-    return () => unsub();
+    const unsubSettings = subscribeToSystemSettings((fetchedSettings) => {
+      setSystemSettings(fetchedSettings);
+    });
+    return () => {
+      unsub();
+      unsubSettings();
+    };
   }, []);
 
   const isUnsubscribed = !user?.planTier || user.planTier === 'None' || user.subscriptionStatus === 'unsubscribed';
@@ -282,7 +289,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
                 </div>
 
                 <div className="mt-2 text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100 inline-block">
-                  ⚡ Includes 3-Day Free Trial
+                  ⚡ Includes {systemSettings.trialDurationDays}-Day Free Trial
                 </div>
 
                 <ul className="mt-6 space-y-2.5 text-xs text-slate-700 font-medium">
@@ -305,7 +312,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
                     : 'bg-[#0F172A] hover:bg-slate-800 text-white'
                 }`}
               >
-                <span>{isCurrent ? 'Manage / Restart Trial' : `Start 3-Day Trial (${p.priceNaira})`}</span>
+                <span>{isCurrent ? 'Manage / Restart Trial' : `Start ${systemSettings.trialDurationDays}-Day Trial (${p.priceNaira})`}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>

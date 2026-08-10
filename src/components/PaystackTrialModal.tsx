@@ -50,21 +50,31 @@ export const PaystackTrialModal: React.FC<PaystackTrialModalProps> = ({
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/paystack/initialize', {
+      const res = await fetch('/api/billing/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: user?.email || 'owner@store.com',
-          amount: planPrice,
-          planName: selectedPlan,
           userId: user?.id,
+          email: user?.email || 'owner@store.com',
+          planId: selectedPlan,
+          planName: selectedPlan,
+          billingCycle: 'monthly',
+          amount: planPrice,
         }),
       });
 
       const data = await res.json();
       setLoading(false);
 
-      if (data.status || data.data) {
+      const authUrl = data.authorization_url || data.data?.authorization_url;
+
+      if (authUrl && authUrl.startsWith('https://')) {
+        // Redirect directly to Paystack Hosted Checkout Page
+        window.location.href = authUrl;
+        return;
+      }
+
+      if (data.status || data.success || data.data) {
         setStep('checkout');
       } else {
         setErrorMsg(data.message || 'Failed to initialize Paystack authorization.');

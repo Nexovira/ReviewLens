@@ -12,6 +12,7 @@ import { AuthModal } from './components/AuthModal';
 import { PrintableReportView } from './components/PrintableReportView';
 import { TourGuideModal } from './components/TourGuideModal';
 import { LockedOverlay } from './components/LockedOverlay';
+import { BillingCallbackHandler } from './components/BillingCallbackHandler';
 import { UserProfile, Product, PlanTier, isPlatformOwner } from './types';
 import {
   getStoredUser,
@@ -347,6 +348,15 @@ export default function App() {
         isOpen={isTourOpen}
         onClose={() => setIsTourOpen(false)}
         onStartAnalyzing={() => setIsAddProductOpen(true)}
+      />
+
+      {/* Paystack Callback & Verification Screen */}
+      <BillingCallbackHandler
+        currentUser={user}
+        onVerificationComplete={(updatedUser) => {
+          setUser(updatedUser);
+          setCurrentView('dashboard');
+        }}
       />
     </div>
   );

@@ -630,24 +630,49 @@ Return JSON with:
   }
 });
 
-// Paystack Payment Initialization Endpoint
-app.post("/api/paystack/initialize", async (req, res) => {
+// Paystack & Billing Payment Initialization Endpoint (/api/billing/initialize & /api/paystack/initialize)
+const initializeBillingHandler = async (req: express.Request, res: express.Response) => {
   try {
-    const { email, amount, planName, userId } = req.body;
+    const { email, amount, planName, planId, billingCycle, userId } = req.body;
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    const planPrice = systemSettings.prices[planName as 'Starter' | 'Growth' | 'Pro'] || amount || 3000;
+    
+    // Normalize Plan Identifier
+    let canonicalPlan: 'Starter' | 'Growth' | 'Pro' = 'Growth';
+    const rawPlan = (planId || planName || 'Growth').toString().trim().toUpperCase();
+    if (rawPlan === 'STARTER') canonicalPlan = 'Starter';
+    else if (rawPlan === 'PRO') canonicalPlan = 'Pro';
+    else canonicalPlan = 'Growth';
+
+    const planPrice = systemSettings.prices[canonicalPlan] || amount || 3000;
+    const uId = userId || email || `usr_${Date.now()}`;
+    const userEmail = email || "owner@reviewlens.com";
+
+    const host = req.get("host") || "localhost:3000";
+    const protocol = req.protocol || "http";
+    const callbackUrl = `${protocol}://${host}/billing/callback?userId=${encodeURIComponent(uId)}&planId=${encodeURIComponent(canonicalPlan)}`;
 
     if (!secretKey) {
-      // Demo environment checkout response
+      // Demo / Sandbox mode authorization checkout URL
       const demoRef = "REF_TRIAL_" + Math.floor(Math.random() * 1000000000);
+      const demoAuthUrl = `${protocol}://${host}/billing/callback?trxref=${demoRef}&reference=${demoRef}&userId=${encodeURIComponent(uId)}&planId=${encodeURIComponent(canonicalPlan)}`;
+
       return res.json({
+        success: true,
         status: true,
-        message: "Payment method authorization link created",
+        message: "Payment method authorization link initialized",
+        authorization_url: demoAuthUrl,
+        access_code: "demo_access_" + Date.now(),
+        reference: demoRef,
+        planId: canonicalPlan,
+        planName: canonicalPlan,
+        amount: planPrice,
+        trialDurationDays: systemSettings.trialDurationDays,
         data: {
-          authorization_url: "#demo-paystack-trial",
+          authorization_url: demoAuthUrl,
           access_code: "demo_access_" + Date.now(),
           reference: demoRef,
-          planName: planName || "Growth",
+          planName: canonicalPlan,
+          planId: canonicalPlan,
           amount: planPrice,
           trialDurationDays: systemSettings.trialDurationDays,
           disclosure: `Start your ${systemSettings.trialDurationDays}-day trial. Your payment method is required to start the trial. You will be charged ₦${planPrice.toLocaleString('en-NG')} after ${systemSettings.trialDurationDays} days unless you cancel before the trial ends.`
@@ -662,11 +687,14 @@ app.post("/api/paystack/initialize", async (req, res) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        email,
+        email: userEmail,
         amount: planPrice * 100, // Paystack amount is in kobo (Naira * 100)
+        callback_url: callbackUrl,
         metadata: {
-          planName,
-          userId,
+          userId: uId,
+          planId: canonicalPlan,
+          planName: canonicalPlan,
+          billingCycle: billingCycle || "monthly",
           isTrial: true,
           trialDurationDays: systemSettings.trialDurationDays,
           disclosureAccepted: true,
@@ -676,41 +704,51 @@ app.post("/api/paystack/initialize", async (req, res) => {
 
     const data = await paystackRes.json();
     if (data && data.data) {
-      data.data.planName = planName;
+      data.success = true;
+      data.authorization_url = data.data.authorization_url;
+      data.reference = data.data.reference;
+      data.data.planId = canonicalPlan;
+      data.data.planName = canonicalPlan;
       data.data.amount = planPrice;
       data.data.trialDurationDays = systemSettings.trialDurationDays;
-      data.data.disclosure = `Start your ${systemSettings.trialDurationDays}-day trial. Your payment method is required to start the trial. You will be charged ₦${planPrice.toLocaleString('en-NG')} after ${systemSettings.trialDurationDays} days unless you cancel before the trial ends.`;
     }
     return res.json(data);
   } catch (err: any) {
-    console.error("Paystack init error:", err);
-    return res.status(500).json({ status: false, message: "Payment initialization failed" });
+    console.error("Paystack billing init error:", err);
+    return res.status(500).json({ success: false, status: false, message: "Payment initialization failed" });
   }
-});
+};
+
+app.post("/api/billing/initialize", initializeBillingHandler);
+app.post("/api/paystack/initialize", initializeBillingHandler);
 
 // Paystack Payment / Trial Confirmation Endpoint
 app.post("/api/paystack/confirm-trial", async (req, res) => {
   try {
-    const { reference, userId, email, planName, storeName, cardLast4, cardBrand: reqCardBrand } = req.body;
+    const { reference, userId, email, planName, planId, storeName, cardLast4, cardBrand: reqCardBrand } = req.body;
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
     let paystackAuthData: any = null;
 
-    if (secretKey && !reference.startsWith("REF_")) {
-      const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${secretKey}`,
-        },
-      });
-      const verifyData = await paystackRes.json();
-      if (verifyData && verifyData.status && verifyData.data) {
-        paystackAuthData = verifyData.data.authorization || null;
+    if (secretKey && reference && !reference.startsWith("REF_")) {
+      try {
+        const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${secretKey}`,
+          },
+        });
+        const verifyData = await paystackRes.json();
+        if (verifyData && verifyData.status && verifyData.data) {
+          paystackAuthData = verifyData.data.authorization || null;
+        }
+      } catch (e) {
+        console.warn("Paystack verify error during confirm-trial:", e);
       }
     }
 
     const trialStart = new Date();
-    const trialDays = systemSettings.trialDurationDays || 3;
+    const trialDays = systemSettings.trialDurationDays || 7;
     const trialEnd = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000);
 
     const cardBrand = paystackAuthData?.card_type || reqCardBrand || "Paystack Card";
@@ -719,22 +757,33 @@ app.post("/api/paystack/confirm-trial", async (req, res) => {
 
     const uId = userId || `usr_${Date.now()}`;
     const userEmail = email || "store_owner@reviewlens.com";
-    const selectedPlan = planName || "Growth";
+    
+    let selectedPlan: 'Starter' | 'Growth' | 'Pro' = 'Growth';
+    const rawPlan = (planId || planName || 'Growth').toString().trim().toUpperCase();
+    if (rawPlan === 'STARTER') selectedPlan = 'Starter';
+    else if (rawPlan === 'PRO') selectedPlan = 'Pro';
+    else selectedPlan = 'Growth';
+
+    const existing = userSubscriptionsStore.get(uId) || userSubscriptionsStore.get(userEmail) || {};
 
     const updatedProfile = {
+      ...existing,
       id: uId,
       email: userEmail,
-      storeName: storeName || "My E-Commerce Brand",
+      storeName: storeName || existing.storeName || "My E-Commerce Brand",
       planTier: selectedPlan,
-      createdAt: new Date().toISOString(),
+      createdAt: existing.createdAt || new Date().toISOString(),
       subscriptionStatus: "trialing",
+      cardTokenized: true,
       trialStartDate: trialStart.toISOString(),
       trialEndDate: trialEnd.toISOString(),
-      subscriptionRef: reference,
+      trialEndsAt: trialEnd.toISOString(),
+      subscriptionRef: reference || `REF_${Date.now()}`,
       customerRef: paystackAuthData?.authorization_code || `CUST_${Date.now()}`,
       paymentMethodMasked: maskedCard,
       nextBillingDate: trialEnd.toISOString(),
       cancelAtPeriodEnd: false,
+      updatedAt: new Date().toISOString(),
     };
 
     userSubscriptionsStore.set(uId, updatedProfile);
@@ -751,36 +800,85 @@ app.post("/api/paystack/confirm-trial", async (req, res) => {
   }
 });
 
-// Paystack Payment Verification Endpoint
-app.get("/api/paystack/verify/:reference", async (req, res) => {
+// Paystack Billing Verification Endpoint (/api/billing/verify & /api/paystack/verify/:reference)
+const verifyBillingHandler = async (req: express.Request, res: express.Response) => {
   try {
-    const { reference } = req.params;
+    const reference = req.params.reference || req.query.reference || req.query.trxref || req.body.reference || req.body.trxref;
+    const reqUserId = req.query.userId || req.body.userId;
+    const reqPlanId = req.query.planId || req.body.planId || req.body.planName;
     const secretKey = process.env.PAYSTACK_SECRET_KEY;
 
-    if (!secretKey || reference.startsWith("REF_")) {
-      return res.json({
-        status: true,
-        data: { status: "success", reference, amount: 800000 },
+    let verifiedData: any = null;
+
+    if (secretKey && reference && !reference.toString().startsWith("REF_")) {
+      const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+        },
       });
+      const data = await paystackRes.json();
+      if (data && data.status && data.data) {
+        verifiedData = data.data;
+      }
     }
 
-    const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-      },
-    });
+    const meta = verifiedData?.metadata || {};
+    const uId = reqUserId || meta.userId || verifiedData?.customer?.email || `usr_${Date.now()}`;
+    const userEmail = verifiedData?.customer?.email || "store_owner@reviewlens.com";
 
-    const data = await paystackRes.json();
-    return res.json(data);
+    let selectedPlan: 'Starter' | 'Growth' | 'Pro' = 'Growth';
+    const rawPlan = (reqPlanId || meta.planId || meta.planName || 'Growth').toString().trim().toUpperCase();
+    if (rawPlan === 'STARTER') selectedPlan = 'Starter';
+    else if (rawPlan === 'PRO') selectedPlan = 'Pro';
+    else selectedPlan = 'Growth';
+
+    const trialDays = systemSettings.trialDurationDays || 7;
+    const trialEnd = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString();
+
+    const existing = userSubscriptionsStore.get(uId) || userSubscriptionsStore.get(userEmail) || {};
+
+    const updatedProfile = {
+      ...existing,
+      id: uId,
+      email: userEmail,
+      storeName: existing.storeName || "My E-Commerce Brand",
+      planTier: selectedPlan,
+      subscriptionStatus: "trialing",
+      cardTokenized: true,
+      trialStartDate: new Date().toISOString(),
+      trialEndDate: trialEnd,
+      trialEndsAt: trialEnd,
+      subscriptionRef: reference,
+      customerRef: verifiedData?.authorization?.authorization_code || `CUST_${Date.now()}`,
+      paymentMethodMasked: verifiedData?.authorization ? `${verifiedData.authorization.card_type || 'Card'} •••• ${verifiedData.authorization.last4}` : "Paystack Authorized Card",
+      nextBillingDate: trialEnd,
+      cancelAtPeriodEnd: false,
+      updatedAt: new Date().toISOString(),
+    };
+
+    userSubscriptionsStore.set(uId, updatedProfile);
+    if (userEmail) userSubscriptionsStore.set(userEmail, updatedProfile);
+
+    return res.json({
+      success: true,
+      status: true,
+      message: "Subscription verified and trial activated successfully!",
+      userProfile: updatedProfile,
+      data: verifiedData || { status: "success", reference },
+    });
   } catch (err: any) {
     console.error("Paystack verify error:", err);
-    return res.status(500).json({ status: false, message: "Verification failed" });
+    return res.status(500).json({ success: false, status: false, message: "Verification failed" });
   }
-});
+};
 
-// Unified Payment Webhook Handler (/api/webhooks/payment, /api/paystack/webhook, /api/paystack-webhook)
-const paymentWebhookHandler = (req: express.Request, res: express.Response) => {
+app.get("/api/billing/verify/:reference?", verifyBillingHandler);
+app.post("/api/billing/verify", verifyBillingHandler);
+app.get("/api/paystack/verify/:reference", verifyBillingHandler);
+
+// Real-Time Plan Switch Webhook Handler (/api/webhooks/paystack, /api/webhooks/payment, /api/paystack/webhook, /api/paystack-webhook)
+const paystackWebhookHandler = (req: express.Request, res: express.Response) => {
   try {
     const secretKey = process.env.PAYSTACK_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
     const signature = req.headers["x-paystack-signature"] || req.headers["stripe-signature"];
@@ -792,48 +890,82 @@ const paymentWebhookHandler = (req: express.Request, res: express.Response) => {
         .digest("hex");
 
       if (hash !== signature) {
-        console.warn("Invalid webhook signature");
+        console.warn("Invalid webhook signature received");
         return res.status(400).send("Invalid signature");
       }
     }
 
     const event = req.body;
     const eventType = event?.event || event?.type;
-    console.log("Received payment webhook event:", eventType);
+    console.log("Received Paystack webhook event:", eventType);
 
     if (event && event.data) {
       const { customer, metadata } = event.data;
-      const email = customer?.email || metadata?.email;
-      const userId = metadata?.userId || email;
+      const customerEmail = customer?.email || metadata?.email;
+      const userId = metadata?.userId || customerEmail;
+      
+      let targetPlan: 'Starter' | 'Growth' | 'Pro' = 'Growth';
+      const rawPlan = (metadata?.planId || metadata?.planName || 'Growth').toString().trim().toUpperCase();
+      if (rawPlan === 'STARTER') targetPlan = 'Starter';
+      else if (rawPlan === 'PRO') targetPlan = 'Pro';
+      else targetPlan = 'Growth';
 
       if (userId) {
-        const existing = userSubscriptionsStore.get(userId) || {};
+        const existing = userSubscriptionsStore.get(userId) || userSubscriptionsStore.get(customerEmail) || {};
+        const trialDays = systemSettings.trialDurationDays || 7;
+        const trialEnd = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000).toISOString();
 
-        if (eventType === "charge.success" || eventType === "subscription.create" || eventType === "customer.subscription.created") {
-          existing.subscriptionStatus = "trialing";
-          existing.payment_failed = false;
-          existing.nextBillingDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-          userSubscriptionsStore.set(userId, existing);
-          if (email) userSubscriptionsStore.set(email, existing);
-        } else if (eventType === "invoice.payment_failed" || eventType === "charge.failed" || eventType === "subscription.disable" || eventType === "customer.subscription.deleted") {
-          existing.subscriptionStatus = "unsubscribed";
-          existing.payment_failed = true;
-          userSubscriptionsStore.set(userId, existing);
-          if (email) userSubscriptionsStore.set(email, existing);
+        if (
+          eventType === "subscription.create" || 
+          eventType === "subscription.enable" || 
+          eventType === "charge.success" || 
+          eventType === "customer.subscription.created"
+        ) {
+          const updated = {
+            ...existing,
+            id: userId,
+            email: customerEmail || existing.email,
+            planTier: targetPlan,
+            subscriptionStatus: "trialing", // or active
+            cardTokenized: true,
+            trialStartDate: existing.trialStartDate || new Date().toISOString(),
+            trialEndDate: trialEnd,
+            trialEndsAt: trialEnd,
+            updatedAt: new Date().toISOString(),
+            payment_failed: false,
+          };
+          userSubscriptionsStore.set(userId, updated);
+          if (customerEmail) userSubscriptionsStore.set(customerEmail, updated);
+          console.log(`[Paystack Webhook] Successfully activated ${targetPlan} trial for user ${userId}`);
+        } else if (
+          eventType === "invoice.payment_failed" || 
+          eventType === "charge.failed" || 
+          eventType === "subscription.disable" || 
+          eventType === "customer.subscription.deleted"
+        ) {
+          const updated = {
+            ...existing,
+            subscriptionStatus: "locked",
+            payment_failed: true,
+            updatedAt: new Date().toISOString(),
+          };
+          userSubscriptionsStore.set(userId, updated);
+          if (customerEmail) userSubscriptionsStore.set(customerEmail, updated);
         }
       }
     }
 
-    return res.status(200).json({ received: true, status: "success" });
+    return res.status(200).json({ status: "success", received: true });
   } catch (err: any) {
-    console.error("Webhook processing error:", err);
+    console.error("Paystack webhook processing error:", err);
     return res.status(500).send("Webhook error");
   }
 };
 
-app.post("/api/paystack/webhook", paymentWebhookHandler);
-app.post("/api/paystack-webhook", paymentWebhookHandler);
-app.post("/api/webhooks/payment", paymentWebhookHandler);
+app.post("/api/webhooks/paystack", paystackWebhookHandler);
+app.post("/api/paystack/webhook", paystackWebhookHandler);
+app.post("/api/paystack-webhook", paystackWebhookHandler);
+app.post("/api/webhooks/payment", paystackWebhookHandler);
 
 // Cancel Subscription Endpoint
 app.post("/api/paystack/cancel-subscription", (req, res) => {
