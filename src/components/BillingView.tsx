@@ -95,7 +95,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
     updatePlanTierInStorage(updatedUser.planTier);
     await saveUserProfile(updatedUser);
     onUpdateUser(updatedUser);
-    setPaymentSuccessMsg(`Success! Your 3-day trial for ${updatedUser.planTier} Plan is active.`);
+    setPaymentSuccessMsg(`Success! Your 7-day free trial for ${updatedUser.planTier} Plan is active.`);
     setTimeout(() => setPaymentSuccessMsg(''), 5000);
   };
 
@@ -153,7 +153,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
             <h2 className="text-xl font-black text-slate-900">Subscription & Paystack Billing</h2>
           </div>
           <p className="text-xs text-slate-500 mt-1 font-medium">
-            Manage your ReviewLens 3-day paid trial, plan billing, and Paystack authorization methods.
+            Manage your ReviewLens 7-day free trial, plan billing, and Paystack authorization methods.
           </p>
         </div>
 
@@ -170,7 +170,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
                 isUnsubscribed ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
                 'bg-red-500/20 text-red-300 border-red-500/30'
               }`}>
-                {subStatus === 'trialing' ? '3-Day Trial' : isUnsubscribed ? 'Unsubscribed' : subStatus}
+                {subStatus === 'trialing' ? '7-Day Free Trial' : isUnsubscribed ? 'Unsubscribed' : subStatus}
               </span>
             </div>
           </div>
@@ -224,7 +224,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
         {subStatus === 'trialing' && (
           <div className="pt-2 flex flex-wrap items-center justify-between gap-4">
             <p className="text-xs text-amber-300/90 font-medium leading-relaxed">
-              You are currently enjoying your 3-day paid trial of <strong>{currentTier} Plan</strong>. After 3 days, your authorized payment method will be charged {formatPriceNaira(tierPrices[currentTier])} unless you cancel below.
+              You are currently enjoying your 7-day free trial of <strong>{currentTier} Plan</strong> ($0 / ₦0 charged today). Starting on Day 8, your authorized payment method will be charged {formatPriceNaira(tierPrices[currentTier])} unless you cancel below.
             </p>
             <button
               onClick={handleCancelSubscription}

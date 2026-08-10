@@ -241,6 +241,7 @@ export default function App() {
                   setUser(null);
                   setCurrentView('landing');
                 }}
+                onContinueFreeTier={() => setCurrentView('landing')}
               />
             )}
 

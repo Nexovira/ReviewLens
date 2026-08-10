@@ -62,7 +62,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside className="w-64 bg-[#0F172A] border-r border-slate-800/80 flex flex-col justify-between shrink-0 text-slate-400 hidden md:flex">
+    <>
+      <aside className="w-64 bg-[#0F172A] border-r border-slate-800/80 flex flex-col justify-between shrink-0 text-slate-400 hidden md:flex">
       {/* Top Section */}
       <div className="p-5 space-y-6">
         {/* Logo Banner */}
@@ -174,7 +175,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">Unsubscribed</span>
             </div>
             <p className="text-[11px] text-slate-300 leading-relaxed mb-3">
-              Subscribe to Growth or Pro with a 3-day trial to unlock full ReviewLens AI analysis.
+              Subscribe to Growth or Pro with a 7-day free trial to unlock full ReviewLens AI analysis.
             </p>
             <button
               onClick={() => onSelectView('billing')}
@@ -213,5 +214,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
     </aside>
+
+    {/* Mobile Fixed Bottom Navigation Bar */}
+    <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#0F172A]/95 border-t border-slate-800/80 px-2 py-1.5 flex justify-around items-center text-slate-400 shadow-2xl backdrop-blur-md">
+      {navItems.map((item) => {
+        const Icon = item.icon;
+        const isActive = currentView === item.id;
+        return (
+          <button
+            key={item.id}
+            onClick={() => onSelectView(item.id)}
+            className={`flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all cursor-pointer min-h-[44px] ${
+              isActive ? 'text-blue-400 font-bold bg-slate-800' : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Icon className="w-5 h-5 mb-0.5 shrink-0" />
+            <span className="text-[10px] truncate max-w-[64px]">{item.label.split(' ')[0]}</span>
+          </button>
+        );
+      })}
+      <button
+        onClick={onOpenAddProduct}
+        className="flex flex-col items-center justify-center py-1.5 px-3 rounded-xl text-emerald-400 font-bold bg-emerald-500/10 border border-emerald-500/20 cursor-pointer min-h-[44px]"
+      >
+        <PlusCircle className="w-5 h-5 mb-0.5 shrink-0" />
+        <span className="text-[10px]">Analyze</span>
+      </button>
+    </div>
+  </>
   );
 };

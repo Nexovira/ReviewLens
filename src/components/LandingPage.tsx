@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { PlanTier } from '../types';
 import { subscribeToTierPrices, formatPriceNaira, DEFAULT_PRICES, TierPrices } from '../lib/pricingService';
+import { HeroUrlAnalyzer } from './HeroUrlAnalyzer';
 
 interface LandingPageProps {
   onStartDemo: () => void;
@@ -108,7 +109,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartDemo, onSelectP
           </div>
 
           {/* Trust badges */}
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-300 font-bold uppercase tracking-[0.15em]">
+          <div className="mt-12 mb-12 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-300 font-bold uppercase tracking-[0.15em]">
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Instant Review Parsing
             </span>
@@ -119,6 +120,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onStartDemo, onSelectP
               <CheckCircle2 className="w-4 h-4 text-emerald-400" /> Automated Weekly Re-analysis
             </span>
           </div>
+
+          {/* Interactive Hero URL Analyzer Component */}
+          <HeroUrlAnalyzer onUnlockTrial={onStartDemo} />
 
           {/* Interactive Live Sample Dashboard Preview */}
           <div className="mt-14 max-w-5xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden text-left text-slate-900">

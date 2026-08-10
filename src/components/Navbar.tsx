@@ -83,7 +83,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   : (!user?.planTier || user.planTier === 'None' || user.subscriptionStatus === 'unsubscribed')
                   ? 'No Active Plan'
                   : user.subscriptionStatus === 'trialing'
-                  ? `${user.planTier} (3-Day Trial)`
+                  ? `${user.planTier} (7-Day Free Trial)`
                   : `${user.planTier} Plan`}
               </span>
             </button>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, Lock, ShieldCheck, Zap, X, AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
 import { UserProfile, PlanTier } from '../types';
-import { formatPriceNaira } from '../lib/pricingService';
+import { formatPriceNaira, subscribeToSystemSettings, SystemSettings, DEFAULT_SETTINGS } from '../lib/pricingService';
 
 interface PaystackTrialModalProps {
   isOpen: boolean;
@@ -27,6 +27,14 @@ export const PaystackTrialModal: React.FC<PaystackTrialModalProps> = ({
   const [expiry, setExpiry] = useState('');
   const [cvv, setCvv] = useState('');
   const [cardHolder, setCardHolder] = useState(user?.storeName || 'Store Owner');
+  const [systemSettings, setSystemSettings] = useState<SystemSettings>(DEFAULT_SETTINGS);
+
+  useEffect(() => {
+    const unsub = subscribeToSystemSettings((settings) => {
+      setSystemSettings(settings);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -128,7 +136,7 @@ export const PaystackTrialModal: React.FC<PaystackTrialModalProps> = ({
               <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
                 ReviewLens Paystack Trial
               </span>
-              <h2 className="text-lg font-black text-slate-900 mt-0.5">Start your 3-day trial</h2>
+              <h2 className="text-lg font-black text-slate-900 mt-0.5">Start your {systemSettings.trialDurationDays}-day free trial</h2>
             </div>
           </div>
           <button
@@ -153,7 +161,7 @@ export const PaystackTrialModal: React.FC<PaystackTrialModalProps> = ({
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">Selected Subscription Tier</span>
                 <span className="text-xs font-black text-amber-300 bg-amber-400/20 px-2.5 py-0.5 rounded-full border border-amber-400/30">
-                  3 Days Free
+                  {systemSettings.trialDurationDays} Days Free
                 </span>
               </div>
               <div className="flex items-baseline justify-between">
@@ -165,15 +173,15 @@ export const PaystackTrialModal: React.FC<PaystackTrialModalProps> = ({
               </div>
             </div>
 
-            {/* MANDATORY PAYMENT DISCLOSURE (Requirement 1 & 15) */}
+            {/* MANDATORY PAYMENT DISCLOSURE */}
             <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900 space-y-2">
               <div className="flex items-start gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                 <div className="leading-relaxed font-medium">
                   <strong className="font-extrabold text-amber-950 block mb-1">
-                    Your payment method is required to start the trial.
+                    Your credit/debit card is required to start the {systemSettings.trialDurationDays}-Day Free Trial.
                   </strong>
-                  You will be charged the selected plan price (<strong className="text-slate-900">{formattedPrice}/month</strong>) after 3 days unless you cancel before the trial ends.
+                  Initial Charge: <strong className="text-slate-900">₦0 ($0)</strong>. You will be billed <strong className="text-slate-900">{formattedPrice}/month</strong> starting on Day {systemSettings.trialDurationDays + 1} unless you cancel before the trial ends.
                 </div>
               </div>
             </div>
@@ -182,28 +190,28 @@ export const PaystackTrialModal: React.FC<PaystackTrialModalProps> = ({
             <div className="space-y-2.5 text-xs text-slate-600">
               <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Immediate 3-day access to all {selectedPlan} features</span>
+                <span>Immediate {systemSettings.trialDurationDays}-day full access to all {selectedPlan} AI features</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Zero charge today (₦0.00 billed immediately)</span>
+                <span>Zero charge today (₦0.00 / $0 billed upfront)</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>Cancel anytime in Billing page before trial expires</span>
+                <span>Cancel anytime in Billing settings before trial expires</span>
               </div>
             </div>
 
             <button
               onClick={handleInitializeTrial}
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-sm py-3.5 rounded-2xl shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5 disabled:opacity-50"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black text-sm py-3.5 rounded-2xl shadow-lg shadow-blue-600/25 transition-all flex items-center justify-center gap-2 transform hover:-translate-y-0.5 disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
-                <span>Initializing Paystack Authorization...</span>
+                <span>Initializing Paystack Checkout...</span>
               ) : (
                 <>
-                  <span>Authorize Payment Method & Start 3-Day Trial</span>
+                  <span>Add Card & Start {systemSettings.trialDurationDays}-Day Free Trial</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
@@ -216,9 +224,9 @@ export const PaystackTrialModal: React.FC<PaystackTrialModalProps> = ({
             <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs flex items-center justify-between">
               <div>
                 <span className="text-slate-500 text-[10px] font-bold uppercase tracking-wider block">Plan & Trial</span>
-                <strong className="text-slate-900 font-black">{selectedPlan} Plan (3-Day Trial)</strong>
+                <strong className="text-slate-900 font-black">{selectedPlan} Plan ({systemSettings.trialDurationDays}-Day Trial)</strong>
               </div>
-              <span className="font-black text-slate-900 text-sm">{formattedPrice} after 3 days</span>
+              <span className="font-black text-slate-900 text-sm">{formattedPrice} after {systemSettings.trialDurationDays} days</span>
             </div>
 
             <div className="space-y-3">
@@ -289,7 +297,7 @@ export const PaystackTrialModal: React.FC<PaystackTrialModalProps> = ({
                 ) : (
                   <>
                     <Lock className="w-4 h-4" />
-                    <span>Confirm Payment Method & Start 3-Day Trial</span>
+                    <span>Confirm Payment Method & Start {systemSettings.trialDurationDays}-Day Trial</span>
                   </>
                 )}
               </button>
@@ -305,9 +313,9 @@ export const PaystackTrialModal: React.FC<PaystackTrialModalProps> = ({
             <div className="w-16 h-16 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h3 className="text-xl font-black text-slate-900">3-Day Paid Trial Active!</h3>
+            <h3 className="text-xl font-black text-slate-900">{systemSettings.trialDurationDays}-Day Paid Trial Active!</h3>
             <p className="text-xs text-slate-600 leading-relaxed max-w-xs mx-auto">
-              Your payment method was authorized successfully with Paystack. Enjoy 3 days of full <strong>{selectedPlan} Plan</strong> access!
+              Your payment method was authorized successfully with Paystack. Enjoy {systemSettings.trialDurationDays} days of full <strong>{selectedPlan} Plan</strong> access!
             </p>
           </div>
         )}

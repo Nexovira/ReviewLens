@@ -172,9 +172,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </p>
                 <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
                   {isEndingSoon ? (
-                    <>Your 3-day trial ends tomorrow. You'll be charged <strong>{planPrice}</strong> to continue using {plan} unless you cancel before the trial ends.</>
+                    <>Your 7-day free trial ends tomorrow. You'll be charged <strong>{planPrice}</strong> to continue using {plan} unless you cancel before the trial ends.</>
                   ) : (
-                    <>Your payment method was authorized with Paystack. You will be charged <strong>{planPrice}</strong> after 3 days unless you cancel.</>
+                    <>Your payment method was authorized with Paystack ($0 / ₦0 charged today). You will be charged <strong>{planPrice}</strong> starting on Day 8 unless you cancel.</>
                   )}
                 </p>
               </div>
@@ -207,7 +207,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </span>
               </p>
               <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
-                You have not subscribed to a plan yet. Select a plan (Starter, Growth, or Pro) and authorize your 3-day trial to start analyzing customer reviews and competitor intelligence.
+                You have not subscribed to a plan yet. Select a plan (Starter, Growth, or Pro) and authorize your 7-day free trial to start analyzing customer reviews and competitor intelligence.
               </p>
             </div>
           </div>
